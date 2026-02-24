@@ -3,6 +3,7 @@ app_id = "installer"
 author_name = "System"
 app_name = "Install Apps"
 lang = "rust"
+sudo = true
 
 [files]
 ascii = { path = "ascii.fff", url = "https://fonts.fireflyzero.com/fonts/ascii/eg_6x9.fff", sha256 = "b07e868a74a070efcf4ca65d18839da883d1e273b646d8c54261fadec638c77" }
