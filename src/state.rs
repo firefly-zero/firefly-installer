@@ -12,6 +12,7 @@ pub enum Scene {
     Password,
     Connect,
     Error,
+    Waiting,
 }
 
 pub struct State {
@@ -22,6 +23,7 @@ pub struct State {
     pub connected: bool,
     pub ssid: String,
     pub password: String,
+    pub session_id: String,
     pub scene: Scene,
     pub cursor: usize,
     pub input: InputManager,
@@ -52,6 +54,7 @@ pub fn load_state() {
         connected: false,
         ssid: String::new(),
         password,
+        session_id: String::new(),
         scene: Scene::Points,
         cursor: 0,
         input: InputManager::new(),

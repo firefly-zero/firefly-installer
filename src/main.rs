@@ -7,6 +7,7 @@ mod scene_connect;
 mod scene_error;
 mod scene_password;
 mod scene_points;
+mod scene_waiting;
 mod state;
 mod wifi;
 
@@ -33,6 +34,7 @@ extern "C" fn update() {
         Scene::Password => scene_password::update(state),
         Scene::Connect => scene_connect::update(state),
         Scene::Error => scene_error::update(state),
+        Scene::Waiting => scene_waiting::update(state),
     }
 }
 
@@ -45,5 +47,6 @@ extern "C" fn render() {
         Scene::Password => scene_password::render(state),
         Scene::Connect => scene_connect::render(state),
         Scene::Error => scene_error::render(state),
+        Scene::Waiting => scene_waiting::render(state),
     }
 }

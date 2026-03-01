@@ -8,9 +8,9 @@ pub fn update(state: &mut State) {
         return;
     }
     if state.connected {
-        // if state.input.get() != Input::None {
-        //     state.transition(Scene::Points);
-        // }
+        if state.input.get() != Input::None {
+            state.transition(Scene::Waiting);
+        }
         return;
     }
     let res = wifi::connect(&state.ssid, &state.password);
@@ -27,9 +27,9 @@ pub fn render(state: &mut State) {
     let text_color = theme.primary;
 
     let text = if state.rendered_message {
-        "connecting..."
+        "Connecting to Wi-Fi..."
     } else {
-        "connected!"
+        "Connected!"
     };
     state.rendered_message = true;
     let point = Point::new(40, 40);
