@@ -1,6 +1,4 @@
 //! Scene showing the password input prompt.
-use firefly_rust::*;
-
 use crate::*;
 
 pub fn update(state: &mut State) {

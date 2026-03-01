@@ -3,14 +3,13 @@
 extern crate alloc;
 
 mod bindings;
-mod input;
 mod scene_password;
 mod scene_points;
 mod state;
 mod wifi;
 
-use firefly_rust as ff;
-use input::*;
+use firefly_rust::*;
+use firefly_ui::{Input, InputManager};
 use state::*;
 
 #[unsafe(no_mangle)]
@@ -35,8 +34,8 @@ extern "C" fn update() {
 
 #[unsafe(no_mangle)]
 extern "C" fn render() {
-    ff::clear_screen(ff::Color::White);
     let state = get_state();
+    firefly_ui::draw_bg(state.settings.theme);
     match state.scene {
         Scene::Points => scene_points::render(state),
         Scene::Password => scene_password::render(state),
