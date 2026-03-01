@@ -3,9 +3,17 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum Status {
+    Connected,
+    Disconnected,
+    Error,
+    Other,
+}
+
 /// Connect to a Wi-Fi access point.
-pub fn connect(ssid: &str, pass: &str) -> Result<(), ()> {
-    let err = unsafe {
+pub fn connect(ssid: &str, pass: &str) {
+    unsafe {
         bindings::connect(
             ssid.as_ptr() as u32,
             ssid.len() as u32,
@@ -13,7 +21,16 @@ pub fn connect(ssid: &str, pass: &str) -> Result<(), ()> {
             pass.len() as u32,
         )
     };
-    if err == 0 { Ok(()) } else { Err(()) }
+}
+
+pub fn status() -> Status {
+    let status = unsafe { bindings::status() };
+    match status {
+        0 => Status::Error,
+        1 => Status::Connected,
+        2 => Status::Disconnected,
+        _ => Status::Other,
+    }
 }
 
 /// Close Wi-Fi connection.
