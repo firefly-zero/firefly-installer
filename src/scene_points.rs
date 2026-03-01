@@ -16,6 +16,9 @@ pub fn update(state: &mut State) {
         }
     };
 
+    if points.is_empty() {
+        return;
+    }
     match state.input.get() {
         Input::Up => {
             if state.cursor > 0 {
@@ -23,8 +26,8 @@ pub fn update(state: &mut State) {
             }
         }
         Input::Down => {
-            if state.cursor > 0 {
-                state.cursor -= 1;
+            if state.cursor < points.len() - 1 {
+                state.cursor += 1;
             }
         }
         Input::Select => {
@@ -43,11 +46,17 @@ pub fn render(state: &mut State) {
     let text_color = theme.primary;
 
     let Some(points) = &state.points else {
-        let text = "scanning...";
+        let text = "Scanning...";
         let point = Point::new(40, 40);
         draw_text(text, &font, point, text_color);
         return;
     };
+    if points.is_empty() {
+        let text = "No access points found";
+        let point = Point::new(40, 40);
+        draw_text(text, &font, point, text_color);
+        return;
+    }
 
     firefly_ui::draw_cursor(state.cursor as u32, theme, &font, state.input.pressed(), 0);
     for (ssid, i) in points.iter().zip(1..) {

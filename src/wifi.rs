@@ -1,5 +1,7 @@
 use crate::*;
-use alloc::{string::String, vec::Vec};
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// Connect to a Wi-Fi access point.
 pub fn connect(ssid: &str, pass: &str) -> Result<(), ()> {
@@ -23,7 +25,7 @@ pub fn disconnect() {
 
 /// List SSIDs of the top few Wi-Fi access points.
 pub fn scan() -> Vec<String> {
-    let mut buf: Vec<u8> = Vec::with_capacity(200);
+    let mut buf: Vec<u8> = vec![0; 200];
     let len = unsafe { bindings::scan(buf.as_mut_ptr() as u32, buf.len() as u32) };
     let mut raw = &buf[..len as usize];
 
