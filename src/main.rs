@@ -3,6 +3,8 @@
 extern crate alloc;
 
 mod bindings;
+mod scene_connect;
+mod scene_error;
 mod scene_password;
 mod scene_points;
 mod state;
@@ -29,6 +31,8 @@ extern "C" fn update() {
     match state.scene {
         Scene::Points => scene_points::update(state),
         Scene::Password => scene_password::update(state),
+        Scene::Connect => scene_connect::update(state),
+        Scene::Error => scene_error::update(state),
     }
 }
 
@@ -39,5 +43,7 @@ extern "C" fn render() {
     match state.scene {
         Scene::Points => scene_points::render(state),
         Scene::Password => scene_password::render(state),
+        Scene::Connect => scene_connect::render(state),
+        Scene::Error => scene_error::render(state),
     }
 }

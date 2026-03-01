@@ -10,6 +10,8 @@ static mut STATE: OnceCell<State> = OnceCell::new();
 pub enum Scene {
     Points,
     Password,
+    Connect,
+    Error,
 }
 
 pub struct State {
@@ -17,6 +19,7 @@ pub struct State {
     pub settings: Settings,
     pub points: Option<Vec<String>>,
     pub rendered_message: bool,
+    pub connected: bool,
     pub ssid: String,
     pub password: String,
     pub scene: Scene,
@@ -46,6 +49,7 @@ pub fn load_state() {
         settings: get_settings(get_me()),
         points: None,
         rendered_message: false,
+        connected: false,
         ssid: String::new(),
         password,
         scene: Scene::Points,

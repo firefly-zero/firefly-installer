@@ -49,7 +49,6 @@ pub fn render(state: &mut State) {
         return;
     };
 
-    let font = state.font.as_font();
     firefly_ui::draw_cursor(state.cursor as u32, theme, &font, state.input.pressed(), 0);
     for (ssid, i) in points.iter().zip(1..) {
         let point = Point::new(10, 10 + 10 * i);

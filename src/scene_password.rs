@@ -34,8 +34,12 @@ pub fn update(state: &mut State) {
                 state.cursor += 1
             }
         }
-        Input::Select => {}
-        Input::Back => {}
+        Input::Select => {
+            state.transition(Scene::Connect);
+        }
+        Input::Back => {
+            state.transition(Scene::Points);
+        }
         Input::None => {}
     }
 }
