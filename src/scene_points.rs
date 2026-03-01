@@ -39,7 +39,8 @@ pub fn update(state: &mut State) {
 pub fn render(state: &mut State) {
     state.rendered_message = true;
     let font = state.font.as_font();
-    let text_color = state.settings.theme.primary;
+    let theme = state.settings.theme;
+    let text_color = theme.primary;
 
     let Some(points) = &state.points else {
         let text = "scanning...";
@@ -48,6 +49,8 @@ pub fn render(state: &mut State) {
         return;
     };
 
+    let font = state.font.as_font();
+    firefly_ui::draw_cursor(state.cursor as u32, theme, &font, state.input.pressed(), 0);
     for (ssid, i) in points.iter().zip(1..) {
         let point = Point::new(10, 10 + 10 * i);
         draw_text(ssid, &font, point, text_color);
