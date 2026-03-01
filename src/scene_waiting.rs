@@ -6,7 +6,9 @@ use crate::*;
 pub fn update(state: &mut State) {
     if state.session_id.is_empty() {
         let session_id = get_random() % 100_000_000;
-        state.session_id = alloc::format!("{session_id}");
+        let mut session_id = alloc::format!("{session_id:08}");
+        session_id.insert(4, ' ');
+        state.session_id = session_id;
     }
 }
 

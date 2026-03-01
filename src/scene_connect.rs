@@ -27,9 +27,9 @@ pub fn render(state: &mut State) {
     let text_color = theme.primary;
 
     let text = if state.rendered_message {
-        "Connecting to Wi-Fi..."
-    } else {
         "Connected!"
+    } else {
+        "Connecting to Wi-Fi..."
     };
     state.rendered_message = true;
     let point = Point::new(40, 40);

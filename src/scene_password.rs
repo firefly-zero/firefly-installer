@@ -2,7 +2,7 @@
 use crate::*;
 
 pub fn update(state: &mut State) {
-    if state.cursor >= state.password.len() - 1 {
+    while state.cursor >= state.password.len() {
         state.password.push('a');
     }
     match state.input.get() {
