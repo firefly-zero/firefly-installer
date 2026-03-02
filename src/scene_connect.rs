@@ -27,10 +27,7 @@ pub fn update(state: &mut State) {
 
     let status = wifi::status();
     if status == wifi::Status::Connected {
-        state.wifi_connected = true;
-        if state.input.get() != Input::None {
-            state.transition(Scene::Waiting)
-        }
+        state.transition(Scene::Waiting)
     }
     if state.cursor >= MAX_WAIT {
         state.transition(Scene::Error)
@@ -42,11 +39,7 @@ pub fn render(state: &mut State) {
     let theme = state.settings.theme;
     let text_color = theme.primary;
 
-    let text = if state.wifi_connected {
-        "Connected!"
-    } else {
-        "Connecting to Wi-Fi..."
-    };
+    let text = "Connecting to Wi-Fi...";
     state.rendered_message = true;
     let point = Point::new(40, 40);
     draw_text(text, &font, point, text_color);
