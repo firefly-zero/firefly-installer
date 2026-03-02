@@ -4,7 +4,7 @@ unsafe extern "C" {
     pub(crate) fn connect(ssid_ptr: u32, ssid_len: u32, pass_ptr: u32, pass_len: u32);
     pub(crate) fn status() -> u32;
     pub(crate) fn disconnect();
-    // pub(crate) fn tcp_open();
-    // pub(crate) fn tcp_status() -> u32;
-    // pub(crate) fn tcp_close();
+    pub(crate) fn tcp_open(ip: u32, port: u32);
+    pub(crate) fn tcp_status() -> u32;
+    pub(crate) fn tcp_close();
 }
