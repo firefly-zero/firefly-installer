@@ -22,6 +22,7 @@ extern "C" fn boot() {
 
 #[unsafe(no_mangle)]
 extern "C" fn before_exit() {
+    wifi::tcp_close();
     wifi::disconnect();
 }
 

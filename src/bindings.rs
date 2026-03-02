@@ -6,5 +6,6 @@ unsafe extern "C" {
     pub(crate) fn disconnect();
     pub(crate) fn tcp_open(ip: u32, port: u32);
     pub(crate) fn tcp_status() -> u32;
+    pub(crate) fn tcp_send(ptr: u32, len: u32) -> u32;
     pub(crate) fn tcp_close();
 }

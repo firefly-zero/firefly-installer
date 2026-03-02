@@ -81,10 +81,12 @@ pub fn scan() -> Vec<String> {
 pub fn tcp_open(addr: SocketAddrV4) {
     let ip: u32 = u32::from_be_bytes(addr.ip().octets());
     let port = u32::from(addr.port());
-    unsafe { bindings::tcp_open(ip, port) };
+    unsafe {
+        bindings::tcp_open(ip, port);
+    }
 }
 
-pub fn tcp_status(addr: SocketAddrV4) -> TcpStatus {
+pub fn tcp_status() -> TcpStatus {
     let status = unsafe { bindings::tcp_status() };
     match status {
         0 => TcpStatus::Error,
@@ -103,6 +105,14 @@ pub fn tcp_status(addr: SocketAddrV4) -> TcpStatus {
     }
 }
 
+pub fn tcp_send(data: &[u8]) {
+    unsafe {
+        bindings::tcp_send(data.as_ptr() as u32, data.len() as u32);
+    }
+}
+
 pub fn tcp_close() {
-    unsafe { bindings::tcp_close() };
+    unsafe {
+        bindings::tcp_close();
+    }
 }
