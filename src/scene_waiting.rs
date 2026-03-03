@@ -10,7 +10,7 @@ pub fn update(state: &mut State) {
         let ip = Ipv4Addr::new(192, 168, 2, 6);
         let port = 19743;
         let addr = SocketAddrV4::new(ip, port);
-        wifi::tcp_open(addr);
+        wifi::tcp_connect(addr);
         state.cursor = 1;
     }
 

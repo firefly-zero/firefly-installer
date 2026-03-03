@@ -6,25 +6,87 @@ use core::net::SocketAddrV4;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Status {
-    Connected,
-    Disconnected,
     Error,
+    /// Unknown status.
     Other,
+    /// Not connected (or failed to connect) to an Access Point.
+    Disconnected,
+    /// Connected to the Access Point, obtaining IP address.
+    Initializing,
+    /// IP address is obtained, ready to go.
+    Connected,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+/// TCP connection status.
+///
+/// The descriptions for each status are from [IBM docs][ref].
+///
+/// [ref]: https://www.ibm.com/docs/en/zos/2.1.0?topic=SSLTBW_2.1.0/com.ibm.zos.v2r1.halu101/constatus.html
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum TcpStatus {
     Error,
+
+    /// Represents no connection state at all.
     Closed,
+
+    /// Waiting for a connection request from a remote TCP application.
+    ///
+    /// This is the state in which you can find the listening socket
+    /// of a local TCP server.
     Listen,
+
+    /// Waiting for an acknowledgment from the remote endpoint
+    /// after having sent a connection request. Results after step 1
+    /// of the three-way TCP handshake.
     SynSent,
+
+    /// This endpoint has received a connection request and sent an acknowledgment.
+    ///
+    /// This endpoint is waiting for final acknowledgment that the other endpoint
+    /// did receive this endpoint's acknowledgment of the original connection
+    /// request. Results after step 2 of the three-way TCP handshake.
     SynReceived,
+
+    /// Represents a fully established connection.
+    ///
+    /// This is the normal state for the data transfer phase of the connection.
     Established,
+
+    /// Waiting for an acknowledgment of the connection termination
+    /// request or for a simultaneous connection termination request
+    /// from the remote TCP. This state is normally of short duration.
     FinWait1,
+
+    /// Waiting for a connection termination request from the remote
+    /// TCP after this endpoint has sent its connection termination request.
+    /// This state is normally of short duration, but if the remote socket
+    /// endpoint does not close its socket shortly after it has received
+    /// information that this socket endpoint closed the connection, then
+    /// it might last for some time. Excessive FIN-WAIT-2 states can indicate
+    /// an error in the coding of the remote application.
     FinWait2,
+
+    /// This endpoint has received a close request from the remote endpoint
+    /// and this TCP is now waiting for a connection termination request
+    /// from the local application.
     CloseWait,
+
+    /// Waiting for a connection termination request acknowledgment from the remote TCP.
+    ///
+    /// This state is entered when this endpoint receives a close request
+    /// from the local application, sends a termination request to
+    /// the remote endpoint, and receives a termination request before
+    /// it receives the acknowledgment from the remote endpoint.
     Closing,
+
+    /// Waiting for an acknowledgment of the connection termination
+    /// request previously sent to the remote TCP. This state is entered
+    /// when this endpoint received a termination request before it sent
+    /// its termination request.
     LastAck,
+
+    /// Waiting for enough time to pass to be sure the remote TCP
+    /// received the acknowledgment of its connection termination request.
     TimeWait,
     Unknown,
 }
@@ -45,8 +107,9 @@ pub fn status() -> Status {
     let status = unsafe { bindings::status() };
     match status {
         0 => Status::Error,
-        1 => Status::Connected,
         2 => Status::Disconnected,
+        3 => Status::Initializing,
+        4 => Status::Connected,
         _ => Status::Other,
     }
 }
@@ -78,11 +141,11 @@ pub fn scan() -> Vec<String> {
     points
 }
 
-pub fn tcp_open(addr: SocketAddrV4) {
+pub fn tcp_connect(addr: SocketAddrV4) {
     let ip: u32 = u32::from_be_bytes(addr.ip().octets());
     let port = u32::from(addr.port());
     unsafe {
-        bindings::tcp_open(ip, port);
+        bindings::tcp_connect(ip, port);
     }
 }
 
