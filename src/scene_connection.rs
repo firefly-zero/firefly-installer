@@ -5,13 +5,31 @@ use firefly_rust::*;
 use crate::*;
 
 pub fn update(state: &mut State) {
+    update_wifi(state);
+    if state.wifi_state != WifiState::Connected {
+        return;
+    }
+    update_tcp(state);
+    if state.tcp_state != TcpState::Connected {
+        return;
+    }
+
+    if state.session_id.is_empty() {
+        let session_id = get_random() % 100_000_000;
+        wifi::tcp_send(&session_id.to_le_bytes()[..]);
+        let mut session_id = alloc::format!("{session_id:08}");
+        session_id.insert(4, ' ');
+        state.session_id = session_id;
+    }
+}
+
+fn update_wifi(state: &mut State) {
     state.wifi_wait = usize::min(state.wifi_wait + 1, 400);
     match state.wifi_state {
         WifiState::NotConnected => {
             state.wifi_wait = 0;
             wifi::connect(&state.ssid, &state.password);
             state.wifi_state = WifiState::Connecting;
-            return;
         }
         WifiState::Connecting | WifiState::ObtainingIP => {
             let status = wifi::status();
@@ -30,7 +48,6 @@ pub fn update(state: &mut State) {
                 wifi::Status::Initializing => WifiState::ObtainingIP,
                 wifi::Status::Connected => WifiState::Connected,
             };
-            return;
         }
         WifiState::Connected => {
             let status = wifi::status();
@@ -38,11 +55,11 @@ pub fn update(state: &mut State) {
                 state.wifi_state = WifiState::Failed;
             }
         }
-        WifiState::Failed => {
-            return;
-        }
+        WifiState::Failed => {}
     }
+}
 
+pub fn update_tcp(state: &mut State) {
     state.tcp_wait = usize::min(state.tcp_wait + 1, 400);
     match state.tcp_state {
         TcpState::NotConnected => {
@@ -51,7 +68,6 @@ pub fn update(state: &mut State) {
             let addr = SocketAddrV4::new(ip, port);
             wifi::tcp_connect(addr);
             state.tcp_state = TcpState::Connecting;
-            return;
         }
         TcpState::Connecting => {
             let status = wifi::tcp_status();
@@ -63,7 +79,6 @@ pub fn update(state: &mut State) {
                 wifi::TcpStatus::Established => TcpState::Connected,
                 _ => TcpState::Connecting,
             };
-            return;
         }
         TcpState::Connected => {
             let status = wifi::tcp_status();
@@ -71,17 +86,7 @@ pub fn update(state: &mut State) {
                 state.tcp_state = TcpState::Failed;
             }
         }
-        TcpState::Failed => {
-            return;
-        }
-    }
-
-    if state.session_id.is_empty() {
-        let session_id = get_random() % 100_000_000;
-        wifi::tcp_send(&session_id.to_le_bytes()[..]);
-        let mut session_id = alloc::format!("{session_id:08}");
-        session_id.insert(4, ' ');
-        state.session_id = session_id;
+        TcpState::Failed => {}
     }
 }
 
