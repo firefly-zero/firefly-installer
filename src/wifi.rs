@@ -4,6 +4,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::net::SocketAddrV4;
 
+/// Wi-Fi connection status.
 #[derive(Clone, Copy, PartialEq)]
 pub enum Status {
     Error,
@@ -24,6 +25,7 @@ pub enum Status {
 /// [ref]: https://www.ibm.com/docs/en/zos/2.1.0?topic=SSLTBW_2.1.0/com.ibm.zos.v2r1.halu101/constatus.html
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum TcpStatus {
+    /// TCP status cannot be retrieved.
     Error,
 
     /// Represents no connection state at all.
@@ -88,7 +90,6 @@ pub enum TcpStatus {
     /// Waiting for enough time to pass to be sure the remote TCP
     /// received the acknowledgment of its connection termination request.
     TimeWait,
-    Unknown,
 }
 
 /// Connect to a Wi-Fi access point.
@@ -152,7 +153,6 @@ pub fn tcp_connect(addr: SocketAddrV4) {
 pub fn tcp_status() -> TcpStatus {
     let status = unsafe { bindings::tcp_status() };
     match status {
-        0 => TcpStatus::Error,
         1 => TcpStatus::Closed,
         2 => TcpStatus::Listen,
         3 => TcpStatus::SynSent,
@@ -164,7 +164,7 @@ pub fn tcp_status() -> TcpStatus {
         9 => TcpStatus::Closing,
         10 => TcpStatus::LastAck,
         11 => TcpStatus::TimeWait,
-        _ => TcpStatus::Unknown,
+        _ => TcpStatus::Error,
     }
 }
 

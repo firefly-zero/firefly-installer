@@ -3,11 +3,9 @@
 extern crate alloc;
 
 mod bindings;
-mod scene_connect;
-mod scene_error;
+mod scene_connection;
 mod scene_password;
 mod scene_points;
-mod scene_waiting;
 mod state;
 mod wifi;
 
@@ -33,9 +31,7 @@ extern "C" fn update() {
     match state.scene {
         Scene::Points => scene_points::update(state),
         Scene::Password => scene_password::update(state),
-        Scene::Connect => scene_connect::update(state),
-        Scene::Error => scene_error::update(state),
-        Scene::Waiting => scene_waiting::update(state),
+        Scene::Connection => scene_connection::update(state),
     }
 }
 
@@ -46,8 +42,6 @@ extern "C" fn render() {
     match state.scene {
         Scene::Points => scene_points::render(state),
         Scene::Password => scene_password::render(state),
-        Scene::Connect => scene_connect::render(state),
-        Scene::Error => scene_error::render(state),
-        Scene::Waiting => scene_waiting::render(state),
+        Scene::Connection => scene_connection::render(state),
     }
 }

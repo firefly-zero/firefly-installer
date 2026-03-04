@@ -10,9 +10,24 @@ static mut STATE: OnceCell<State> = OnceCell::new();
 pub enum Scene {
     Points,
     Password,
-    Connect,
-    Error,
-    Waiting,
+    Connection,
+}
+
+#[derive(PartialEq)]
+pub enum WifiState {
+    NotConnected,
+    Connecting,
+    ObtainingIP,
+    Connected,
+    Failed,
+}
+
+#[derive(PartialEq)]
+pub enum TcpState {
+    NotConnected,
+    Connecting,
+    Connected,
+    Failed,
 }
 
 pub struct State {
@@ -26,6 +41,12 @@ pub struct State {
     pub scene: Scene,
     pub cursor: usize,
     pub input: InputManager,
+
+    pub wifi_state: WifiState,
+    pub wifi_wait: usize,
+
+    pub tcp_state: TcpState,
+    pub tcp_wait: usize,
 }
 
 impl State {
@@ -56,6 +77,10 @@ pub fn load_state() {
         scene: Scene::Points,
         cursor: 0,
         input: InputManager::new(),
+        wifi_state: WifiState::NotConnected,
+        wifi_wait: 0,
+        tcp_state: TcpState::NotConnected,
+        tcp_wait: 0,
     };
     #[allow(static_mut_refs)]
     unsafe { STATE.set(state) }.ok().unwrap();
