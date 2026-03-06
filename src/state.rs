@@ -30,6 +30,14 @@ pub enum TcpState {
     Failed,
 }
 
+#[derive(PartialEq)]
+pub enum RomState {
+    NoResponse,
+    Downloading,
+    Done,
+    Failed,
+}
+
 pub struct State {
     pub font: FileBuf,
     pub settings: Settings,
@@ -44,9 +52,11 @@ pub struct State {
 
     pub wifi_state: WifiState,
     pub wifi_wait: usize,
-
     pub tcp_state: TcpState,
     pub tcp_wait: usize,
+    pub rom_state: RomState,
+    pub rom_size: usize,
+    pub rom: Option<Vec<u8>>,
 }
 
 impl State {
@@ -77,10 +87,14 @@ pub fn load_state() {
         scene: Scene::Points,
         cursor: 0,
         input: InputManager::new(),
+
         wifi_state: WifiState::NotConnected,
         wifi_wait: 0,
         tcp_state: TcpState::NotConnected,
         tcp_wait: 0,
+        rom_state: RomState::NoResponse,
+        rom_size: 0,
+        rom: None,
     };
     #[allow(static_mut_refs)]
     unsafe { STATE.set(state) }.ok().unwrap();

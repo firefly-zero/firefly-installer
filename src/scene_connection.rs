@@ -1,5 +1,6 @@
 use core::net::{Ipv4Addr, SocketAddrV4};
 
+use alloc::vec::Vec;
 use firefly_rust::*;
 
 use crate::*;
@@ -20,7 +21,10 @@ pub fn update(state: &mut State) {
         let mut session_id = alloc::format!("{session_id:08}");
         session_id.insert(4, ' ');
         state.session_id = session_id;
+        return;
     }
+
+    update_rom(state);
 }
 
 fn update_wifi(state: &mut State) {
@@ -53,6 +57,10 @@ fn update_wifi(state: &mut State) {
             let status = wifi::status();
             if status != wifi::Status::Connected {
                 state.wifi_state = WifiState::Failed;
+                if state.tcp_state != TcpState::NotConnected {
+                    wifi::tcp_close();
+                    state.tcp_state = TcpState::NotConnected;
+                }
             }
         }
         WifiState::Failed => {}
@@ -84,9 +92,36 @@ pub fn update_tcp(state: &mut State) {
             let status = wifi::tcp_status();
             if status != wifi::TcpStatus::Established {
                 state.tcp_state = TcpState::Failed;
+                // TODO: reset ROM download state.
             }
         }
         TcpState::Failed => {}
+    }
+}
+
+pub fn update_rom(state: &mut State) {
+    match state.rom_state {
+        RomState::NoResponse => {
+            let chunk = wifi::tcp_recv_buf();
+            if !chunk.is_empty() {
+                let chunk = <[u8; 4]>::try_from(chunk).unwrap_or_default();
+                state.rom_size = u32::from_le_bytes(chunk) as usize;
+                state.rom = Some(Vec::with_capacity(state.rom_size));
+                state.rom_state = RomState::Downloading;
+            }
+        }
+        RomState::Downloading => {
+            let chunk = wifi::tcp_recv_buf();
+            if !chunk.is_empty() {
+                let rom = state.rom.as_mut().unwrap();
+                rom.extend_from_slice(&chunk);
+                if rom.len() >= state.rom_size {
+                    state.rom_state = RomState::Done;
+                }
+            }
+        }
+        RomState::Done => {}
+        RomState::Failed => {}
     }
 }
 
@@ -122,6 +157,14 @@ pub fn render(state: &mut State) {
         let point = Point::new(38, 12 + 13 * 4);
         draw_text(&state.session_id, &font, point, theme.accent);
     }
+
+    let rom_msg = match state.rom_state {
+        RomState::NoResponse => return,
+        RomState::Downloading => "4. Downloading...",
+        RomState::Done => "4. Downloaded.",
+        RomState::Failed => "4. Download failed.",
+    };
+    draw_line(4, rom_msg, &font, color);
 }
 
 fn draw_line(i: i32, text: &str, font: &Font, color: Color) {

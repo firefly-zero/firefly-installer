@@ -174,6 +174,18 @@ pub fn tcp_send(data: &[u8]) {
     }
 }
 
+pub fn tcp_recv_buf() -> Vec<u8> {
+    let mut buf = Vec::new();
+    let n = tcp_recv(&mut buf);
+    buf.truncate(n);
+    buf
+}
+
+pub fn tcp_recv(data: &mut [u8]) -> usize {
+    let n = unsafe { bindings::tcp_recv(data.as_mut_ptr() as u32, data.len() as u32) };
+    n as usize
+}
+
 pub fn tcp_close() {
     unsafe {
         bindings::tcp_close();
