@@ -67,7 +67,7 @@ fn update_wifi(state: &mut State) {
     }
 }
 
-pub fn update_tcp(state: &mut State) {
+fn update_tcp(state: &mut State) {
     state.tcp_wait = usize::min(state.tcp_wait + 1, 400);
     match state.tcp_state {
         TcpState::NotConnected => {
@@ -99,7 +99,7 @@ pub fn update_tcp(state: &mut State) {
     }
 }
 
-pub fn update_rom(state: &mut State) {
+fn update_rom(state: &mut State) {
     match state.rom_state {
         RomState::NoResponse => {
             let chunk = wifi::tcp_recv_buf();
@@ -111,12 +111,16 @@ pub fn update_rom(state: &mut State) {
             }
         }
         RomState::Downloading => {
-            let chunk = wifi::tcp_recv_buf();
-            if !chunk.is_empty() {
-                let rom = state.rom.as_mut().unwrap();
+            let rom = state.rom.as_mut().unwrap();
+            for _ in 0..20 {
+                let chunk = wifi::tcp_recv_buf();
+                if chunk.is_empty() {
+                    break;
+                }
                 rom.extend_from_slice(&chunk);
                 if rom.len() >= state.rom_size {
                     state.rom_state = RomState::Done;
+                    break;
                 }
             }
         }
