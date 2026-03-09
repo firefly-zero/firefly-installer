@@ -3,6 +3,7 @@
 extern crate alloc;
 
 mod bindings;
+mod installer;
 mod scene_connection;
 mod scene_password;
 mod scene_points;
