@@ -1,7 +1,6 @@
-use alloc::alloc::alloc;
 use alloc::collections::VecDeque;
 use alloc::string::String;
-use alloc::vec::{self, Vec};
+use alloc::vec::Vec;
 
 use crate::*;
 
@@ -19,6 +18,7 @@ enum FileStatus {
 pub struct Installer {
     protocol: Option<u8>,
     expected_size: Option<u32>,
+    received_size: u32,
     author_id: Option<String>,
     app_id: Option<String>,
     file: FileStatus,
@@ -30,10 +30,21 @@ impl Installer {
         Self {
             protocol: None,
             expected_size: None,
+            received_size: 0,
             author_id: None,
             app_id: None,
             file: FileStatus::Waiting,
             buf: VecDeque::new(),
+        }
+    }
+
+    pub fn done(&self) -> bool {
+        if !self.buf.is_empty() {
+            return false;
+        }
+        match self.expected_size {
+            Some(expected_size) => self.received_size >= expected_size,
+            None => false,
         }
     }
 
@@ -87,15 +98,19 @@ impl Installer {
                     let Some(size) = self.pop_u32() else {
                         break;
                     };
+                    if size as usize > self.buf.len() {
+                        self.buf.reserve(size as usize - self.buf.len());
+                    }
                     self.file = FileStatus::BodySize(name, size);
                 }
                 FileStatus::BodySize(_, size) => {
                     let Some(content) = self.pop_bytes(*size) else {
                         break;
                     };
-                    let FileStatus::BodySize(name, _) = &self.file else {
+                    let FileStatus::BodySize(name, size) = &self.file else {
                         unreachable!()
                     };
+                    self.received_size += size;
                     let path = alloc::format!(
                         "rom/{}/{}/{name}",
                         self.author_id.as_ref().unwrap(),

@@ -12,6 +12,7 @@ mod wifi;
 
 use firefly_rust::*;
 use firefly_ui::{Input, InputManager};
+use installer::*;
 use state::*;
 
 #[unsafe(no_mangle)]

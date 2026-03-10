@@ -1,6 +1,4 @@
 use core::net::{Ipv4Addr, SocketAddrV4};
-
-use alloc::vec::Vec;
 use firefly_rust::*;
 
 use crate::*;
@@ -106,19 +104,17 @@ fn update_rom(state: &mut State) {
             if !chunk.is_empty() {
                 let chunk = <[u8; 4]>::try_from(chunk).unwrap_or_default();
                 state.rom_size = u32::from_le_bytes(chunk) as usize;
-                state.rom = Some(Vec::with_capacity(state.rom_size));
                 state.rom_state = RomState::Downloading;
             }
         }
         RomState::Downloading => {
-            let rom = state.rom.as_mut().unwrap();
             for _ in 0..20 {
                 let chunk = wifi::tcp_recv_buf();
                 if chunk.is_empty() {
                     break;
                 }
-                rom.extend_from_slice(&chunk);
-                if rom.len() >= state.rom_size {
+                state.installer.update(&chunk);
+                if state.installer.done() {
                     state.rom_state = RomState::Done;
                     break;
                 }

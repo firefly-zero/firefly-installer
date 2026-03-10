@@ -49,6 +49,7 @@ pub struct State {
     pub scene: Scene,
     pub cursor: usize,
     pub input: InputManager,
+    pub installer: Installer,
 
     pub wifi_state: WifiState,
     pub wifi_wait: usize,
@@ -56,7 +57,6 @@ pub struct State {
     pub tcp_wait: usize,
     pub rom_state: RomState,
     pub rom_size: usize,
-    pub rom: Option<Vec<u8>>,
 }
 
 impl State {
@@ -87,6 +87,7 @@ pub fn load_state() {
         scene: Scene::Points,
         cursor: 0,
         input: InputManager::new(),
+        installer: Installer::new(),
 
         wifi_state: WifiState::NotConnected,
         wifi_wait: 0,
@@ -94,7 +95,6 @@ pub fn load_state() {
         tcp_wait: 0,
         rom_state: RomState::NoResponse,
         rom_size: 0,
-        rom: None,
     };
     #[allow(static_mut_refs)]
     unsafe { STATE.set(state) }.ok().unwrap();
