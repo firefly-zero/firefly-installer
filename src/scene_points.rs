@@ -1,4 +1,5 @@
 //! Scene showing the list of WiFi access points.
+use alloc::{string::String, vec::Vec};
 use firefly_rust::*;
 
 use crate::*;
@@ -7,14 +8,16 @@ pub fn update(state: &mut State) {
     if !state.rendered_message {
         return;
     }
-    let points = match state.points.as_ref() {
-        Some(points) => points,
-        None => {
-            let points = wifi::scan();
-            state.points = Some(points);
-            state.points.as_ref().unwrap()
+
+    state.wifi_wait += 1;
+    if state.wifi_wait <= 5 {
+        let new_points = wifi::scan();
+        match state.points.as_mut() {
+            Some(old_points) => merge_points(old_points, new_points),
+            None => state.points = Some(new_points),
         }
-    };
+    }
+    let points = state.points.as_ref().unwrap();
 
     if points.is_empty() {
         return;
@@ -36,6 +39,14 @@ pub fn update(state: &mut State) {
         }
         Input::Back => quit(),
         _ => {}
+    }
+}
+
+fn merge_points(old_points: &mut Vec<String>, new_points: Vec<String>) {
+    for point in new_points {
+        if !old_points.contains(&point) {
+            old_points.push(point);
+        }
     }
 }
 
