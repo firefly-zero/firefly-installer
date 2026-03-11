@@ -41,7 +41,7 @@ pub enum RomState {
 pub struct State {
     pub font: FileBuf,
     pub settings: Settings,
-    pub points: Option<Vec<String>>,
+    pub points: Vec<String>,
     pub rendered_message: bool,
     pub ssid: String,
     pub password: String,
@@ -62,6 +62,7 @@ impl State {
     pub fn transition(&mut self, scene: Scene) {
         self.rendered_message = false;
         self.cursor = 0;
+        self.wifi_wait = 0;
         self.scene = scene;
     }
 }
@@ -78,7 +79,7 @@ pub fn load_state() {
     let state = State {
         font,
         settings: get_settings(get_me()),
-        points: None,
+        points: Vec::new(),
         rendered_message: false,
         ssid: String::new(),
         password,

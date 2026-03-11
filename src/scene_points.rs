@@ -1,8 +1,7 @@
 //! Scene showing the list of WiFi access points.
+use crate::*;
 use alloc::{string::String, vec::Vec};
 use firefly_rust::*;
-
-use crate::*;
 
 pub fn update(state: &mut State) {
     if !state.rendered_message {
@@ -13,9 +12,8 @@ pub fn update(state: &mut State) {
     if state.wifi_wait <= 5 {
         scan_points(state);
     }
-    let points = state.points.as_ref().unwrap();
 
-    if points.is_empty() {
+    if state.points.is_empty() {
         return;
     }
     match state.input.get() {
@@ -25,12 +23,12 @@ pub fn update(state: &mut State) {
             }
         }
         Input::Down => {
-            if state.cursor < points.len() - 1 {
+            if state.cursor < state.points.len() - 1 {
                 state.cursor += 1;
             }
         }
         Input::Select => {
-            state.ssid = points[state.cursor].clone();
+            state.ssid = state.points[state.cursor].clone();
             state.transition(Scene::Password);
         }
         Input::Back => quit(),
@@ -40,27 +38,16 @@ pub fn update(state: &mut State) {
 
 /// Scan for more wifi Access Points and add them to the list.
 fn scan_points(state: &mut State) {
-    let mut new_points = wifi::scan();
-    match state.points.as_mut() {
-        Some(old_points) => {
-            merge_points(old_points, new_points);
-            // Sort APs before and after the cursor.
-            // We don't touch the AP under the cursor to avoid
-            // moving the AP just before the user tries to click it.
-            // We also sort the APs before and after cursor separately
-            // so that the APs that the user already scrolled through
-            // are not mixed with the APs that the user is yet to see.
-            if state.cursor > 1 {
-                bubble_sort(&mut old_points[..state.cursor]);
-            }
-            if old_points.len() > state.cursor + 1 {
-                bubble_sort(&mut old_points[state.cursor + 1..]);
-            }
-        }
-        None => {
-            bubble_sort(&mut new_points);
-            state.points = Some(new_points);
-        }
+    let new_points = wifi::scan();
+    merge_points(&mut state.points, new_points);
+    // Sort APs after the cursor.
+    // We don't touch the AP under the cursor to avoid
+    // moving the AP just before the user tries to click it.
+    // We also don't touch the APs before the cursor
+    // so that the APs that the user already scrolled through
+    // are not mixed with the APs that the user is yet to see.
+    if state.points.len() > state.cursor + 1 {
+        bubble_sort(&mut state.points[state.cursor + 1..]);
     }
 }
 
@@ -109,21 +96,19 @@ pub fn render(state: &mut State) {
     let theme = state.settings.theme;
     let text_color = theme.primary;
 
-    let Some(points) = &state.points else {
-        let text = "Scanning...";
-        let point = Point::new(40, 40);
-        draw_text(text, &font, point, text_color);
-        return;
-    };
-    if points.is_empty() {
-        let text = "No access points found";
+    if state.points.is_empty() {
+        let text = if state.wifi_wait <= 5 {
+            "Scanning..."
+        } else {
+            "No access points found"
+        };
         let point = Point::new(40, 40);
         draw_text(text, &font, point, text_color);
         return;
     }
 
     firefly_ui::draw_cursor(state.cursor as u32, theme, &font, state.input.pressed(), 0);
-    for (ssid, i) in points.iter().zip(1..) {
+    for (ssid, i) in state.points.iter().zip(1..) {
         let point = Point::new(20, 12 + 13 * i);
         draw_text(ssid, &font, point, text_color);
     }
