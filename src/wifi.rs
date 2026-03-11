@@ -136,6 +136,9 @@ pub fn scan() -> Vec<String> {
         };
         let name = core::str::from_utf8(raw_name).unwrap_or("");
         raw = raw.get((len + 1)..).unwrap_or(&[]);
+        if name.is_empty() {
+            continue;
+        }
         let name = String::from(name);
         points.push(name);
     }
@@ -175,7 +178,7 @@ pub fn tcp_send(data: &[u8]) {
 }
 
 pub fn tcp_recv_buf() -> Vec<u8> {
-    let mut buf = Vec::new();
+    let mut buf = vec![0; 80];
     let n = tcp_recv(&mut buf);
     buf.truncate(n);
     buf

@@ -87,11 +87,11 @@ fn update_tcp(state: &mut State) {
             };
         }
         TcpState::Connected => {
-            let status = wifi::tcp_status();
-            if status != wifi::TcpStatus::Established {
-                state.tcp_state = TcpState::Failed;
-                // TODO: reset ROM download state.
-            }
+            // let status = wifi::tcp_status();
+            // if status != wifi::TcpStatus::Established {
+            //     state.tcp_state = TcpState::Failed;
+            //     // TODO: reset ROM download state.
+            // }
         }
         TcpState::Failed => {}
     }
@@ -102,20 +102,19 @@ fn update_rom(state: &mut State) {
         RomState::NoResponse => {
             let chunk = wifi::tcp_recv_buf();
             if !chunk.is_empty() {
-                let chunk = <[u8; 4]>::try_from(chunk).unwrap_or_default();
-                state.rom_size = u32::from_le_bytes(chunk) as usize;
+                state.installer.update(&chunk);
                 state.rom_state = RomState::Downloading;
             }
         }
         RomState::Downloading => {
             for _ in 0..20 {
                 let chunk = wifi::tcp_recv_buf();
-                if chunk.is_empty() {
-                    break;
-                }
                 state.installer.update(&chunk);
                 if state.installer.done() {
                     state.rom_state = RomState::Done;
+                    break;
+                }
+                if chunk.is_empty() {
                     break;
                 }
             }

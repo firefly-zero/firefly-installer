@@ -56,7 +56,6 @@ pub struct State {
     pub tcp_state: TcpState,
     pub tcp_wait: usize,
     pub rom_state: RomState,
-    pub rom_size: usize,
 }
 
 impl State {
@@ -94,7 +93,6 @@ pub fn load_state() {
         tcp_state: TcpState::NotConnected,
         tcp_wait: 0,
         rom_state: RomState::NoResponse,
-        rom_size: 0,
     };
     #[allow(static_mut_refs)]
     unsafe { STATE.set(state) }.ok().unwrap();
