@@ -11,11 +11,7 @@ pub fn update(state: &mut State) {
 
     state.wifi_wait += 1;
     if state.wifi_wait <= 5 {
-        let new_points = wifi::scan();
-        match state.points.as_mut() {
-            Some(old_points) => merge_points(old_points, new_points),
-            None => state.points = Some(new_points),
-        }
+        scan_points(state);
     }
     let points = state.points.as_ref().unwrap();
 
@@ -42,12 +38,69 @@ pub fn update(state: &mut State) {
     }
 }
 
+/// Scan for more wifi Access Points and add them to the list.
+fn scan_points(state: &mut State) {
+    let mut new_points = wifi::scan();
+    match state.points.as_mut() {
+        Some(old_points) => {
+            merge_points(old_points, new_points);
+            // Sort APs before and after the cursor.
+            // We don't touch the AP under the cursor to avoid
+            // moving the AP just before the user tries to click it.
+            // We also sort the APs before and after cursor separately
+            // so that the APs that the user already scrolled through
+            // are not mixed with the APs that the user is yet to see.
+            if state.cursor > 1 {
+                bubble_sort(&mut old_points[..state.cursor]);
+            }
+            if old_points.len() > state.cursor + 1 {
+                bubble_sort(&mut old_points[state.cursor + 1..]);
+            }
+        }
+        None => {
+            bubble_sort(&mut new_points);
+            state.points = Some(new_points);
+        }
+    }
+}
+
+/// Add new APs to the end of the APs list, avoiding duplicates.
 fn merge_points(old_points: &mut Vec<String>, new_points: Vec<String>) {
     for point in new_points {
         if !old_points.contains(&point) {
             old_points.push(point);
         }
     }
+}
+
+/// Good old bubble sort. Slower but much smaller than the built-in sort function.
+pub fn bubble_sort(items: &mut [String]) {
+    let len = items.len();
+    if len <= 1 {
+        return;
+    }
+    let mut sorted = false;
+    while !sorted {
+        sorted = true;
+        for i in 0..len - 1 {
+            if ascii_gt(&items[i], &items[i + 1]) {
+                items.swap(i, i + 1);
+                sorted = false;
+            }
+        }
+    }
+}
+
+/// Case-insensitive comparison of two ASCII strings.
+pub fn ascii_gt(s1: &str, s2: &str) -> bool {
+    for (c1, c2) in s1.as_bytes().iter().zip(s2.as_bytes()) {
+        let c1 = c1.to_ascii_lowercase();
+        let c2 = c2.to_ascii_lowercase();
+        if c1 != c2 {
+            return c1 > c2;
+        }
+    }
+    s1.len() > s2.len()
 }
 
 pub fn render(state: &mut State) {
