@@ -35,13 +35,13 @@ fn update_wifi(state: &mut State) {
         }
         WifiState::Connecting | WifiState::ObtainingIP => {
             let status = wifi::status();
-            if state.wifi_wait < 30 {
+            if state.wifi_wait < 60 {
                 return;
             }
             state.wifi_state = match status {
                 wifi::Status::Error | wifi::Status::Other => WifiState::Failed,
                 wifi::Status::Disconnected => {
-                    if state.wifi_wait > 180 {
+                    if state.wifi_wait > 5 * 60 {
                         WifiState::Failed
                     } else {
                         WifiState::Connecting
