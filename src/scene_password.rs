@@ -23,8 +23,18 @@ pub fn render(state: &mut State) {
     firefly_ui::draw_cursor(1, theme, &font, false, 0);
 
     let text = state.password.text.as_str();
-    let point = Point::new(20, 38);
-    draw_text(text, &font, point, theme.accent);
+    if state.input.pressed() {
+        let point = Point::new(20, 38);
+        draw_text(text, &font, point, theme.accent);
+    } else {
+        for i in 0..text.len() {
+            draw_circle(
+                Point::new(21 + i as i32 * i32::from(font.char_width()), 34),
+                i32::from(font.char_width() - 2),
+                Style::solid(theme.accent),
+            );
+        }
+    }
 
     if (state.cursor / 40).is_multiple_of(2) {
         draw_rect(
