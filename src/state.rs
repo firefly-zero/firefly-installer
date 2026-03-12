@@ -51,6 +51,7 @@ pub struct State {
     pub cursor: usize,
     pub input: InputManager,
     pub installer: Installer,
+    pub show_password: u8,
 
     pub wifi_state: WifiState,
     pub wifi_wait: usize,
@@ -91,6 +92,7 @@ pub fn load_state() {
         session_id: String::new(),
         scene: Scene::Points,
         cursor: 0,
+        show_password: 0,
         input: InputManager::new(),
         installer: Installer::new(),
 

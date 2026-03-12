@@ -3,8 +3,14 @@ use crate::*;
 
 pub fn update(state: &mut State) {
     state.cursor = state.cursor.wrapping_add(1);
+    state.show_password = state.show_password.saturating_sub(1);
+    let old_len = state.password.text.len();
     match state.password.update() {
-        firefly_keyboard::State::TextChanged => {}
+        firefly_keyboard::State::TextChanged => {
+            if state.password.text.len() < old_len {
+                state.show_password = 60;
+            }
+        }
         firefly_keyboard::State::Open => {}
         firefly_keyboard::State::Closed => state.password.open(),
         firefly_keyboard::State::JustClosed => state.transition(Scene::Connection),
@@ -23,7 +29,7 @@ pub fn render(state: &mut State) {
     firefly_ui::draw_cursor(1, theme, &font, false, 0);
 
     let text = state.password.text.as_str();
-    if state.input.pressed() {
+    if state.show_password != 0 {
         let point = Point::new(20, 38);
         draw_text(text, &font, point, theme.accent);
     } else {
