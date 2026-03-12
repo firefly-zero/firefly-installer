@@ -2,6 +2,7 @@
 use crate::*;
 
 pub fn update(state: &mut State) {
+    state.cursor = state.cursor.wrapping_add(1);
     match state.password.update() {
         firefly_keyboard::State::TextChanged => {}
         firefly_keyboard::State::Open => {}
@@ -24,6 +25,17 @@ pub fn render(state: &mut State) {
     let text = state.password.text.as_str();
     let point = Point::new(20, 38);
     draw_text(text, &font, point, theme.accent);
+
+    if (state.cursor / 40).is_multiple_of(2) {
+        draw_rect(
+            Point::new(
+                20 + font.line_width_ascii(text) as i32,
+                41 - i32::from(font.char_height()),
+            ),
+            Size::new(font.char_width(), font.char_height() - 1),
+            Style::solid(theme.accent),
+        );
+    }
 
     state.password.render(&font);
 }
