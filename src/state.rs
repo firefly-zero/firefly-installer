@@ -2,6 +2,7 @@ use crate::*;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::cell::OnceCell;
+use firefly_keyboard::Keyboard;
 use firefly_rust::*;
 
 static mut STATE: OnceCell<State> = OnceCell::new();
@@ -44,7 +45,7 @@ pub struct State {
     pub points: Vec<String>,
     pub rendered_message: bool,
     pub ssid: String,
-    pub password: String,
+    pub password: Keyboard,
     pub session_id: String,
     pub scene: Scene,
     pub cursor: usize,
@@ -76,13 +77,17 @@ pub fn load_state() {
     let font = load_file_buf("ascii").unwrap();
     let password = option_env!("WIFI_PASSWORD").unwrap_or_default();
     let password = String::from(password);
+    let kbd_opts = firefly_keyboard::Options {
+        text: password,
+        ..Default::default()
+    };
     let state = State {
         font,
         settings: get_settings(get_me()),
         points: Vec::new(),
         rendered_message: false,
         ssid: String::new(),
-        password,
+        password: Keyboard::new(kbd_opts),
         session_id: String::new(),
         scene: Scene::Points,
         cursor: 0,

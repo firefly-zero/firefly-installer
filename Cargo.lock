@@ -3,6 +3,15 @@
 version = 4
 
 [[package]]
+name = "firefly-keyboard"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c42aa15959b1d1056185cd9e68310951c4b6491ba37abe6d56c689f01b8e9897"
+dependencies = [
+ "firefly-rust",
+]
+
+[[package]]
 name = "firefly-rust"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -24,6 +33,7 @@ dependencies = [
 name = "installer"
 version = "0.1.0"
 dependencies = [
+ "firefly-keyboard",
  "firefly-rust",
  "firefly-ui",
 ]

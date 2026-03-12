@@ -102,7 +102,7 @@ pub fn render(state: &mut State) {
         } else {
             "No access points found"
         };
-        let point = Point::new(40, 40);
+        let point = Point::new(20, 25);
         draw_text(text, &font, point, text_color);
         return;
     }

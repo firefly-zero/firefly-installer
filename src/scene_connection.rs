@@ -30,7 +30,7 @@ fn update_wifi(state: &mut State) {
     match state.wifi_state {
         WifiState::NotConnected => {
             state.wifi_wait = 0;
-            wifi::connect(&state.ssid, &state.password);
+            wifi::connect(&state.ssid, &state.password.text);
             state.wifi_state = WifiState::Connecting;
         }
         WifiState::Connecting | WifiState::ObtainingIP => {
