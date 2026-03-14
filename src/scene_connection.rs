@@ -19,7 +19,7 @@ pub fn update(state: &mut State) {
     }
 
     if state.session_id.is_empty() {
-        let session_id = get_random() % 100_000_000;
+        let session_id = load_session_id();
         wifi::tcp_send(&session_id.to_le_bytes()[..]);
         let mut session_id = alloc::format!("{session_id:08}");
         session_id.insert(4, ' ');
@@ -28,6 +28,44 @@ pub fn update(state: &mut State) {
     }
 
     update_rom(state);
+}
+
+/// Load previously created session ID.
+///
+/// If none is saved, a new one will be generated.
+///
+/// Since the ID is preserved between sessions, "device ID" would be a better name.
+/// However, we want to avoid confusion with serial number, MAC address,
+/// and a ton of other "device IDs".
+///
+/// We could use the device MAC address instead. However, we want to be able
+/// to generate a new ID without changing anything outside of the installer.
+fn load_session_id() -> u32 {
+    let size = get_file_size("id");
+    if size == 4 {
+        let mut buf = [0u8; 4];
+        load_file("id", &mut buf);
+        return u32::from_le_bytes(buf);
+    }
+
+    // What's the probability of two users having the same session ID?
+    // This is exactly the same statistic problem as in the famous Birthday Paradox.
+    // The precise formula uses factorial, which I cannot calculate for 100kk.
+    //
+    // There is also an approximation based on Taylor series
+    // which gives a negligibly small probability (assuming I'm using it right).
+    //
+    // ```python
+    // n = 70_000 # presumed number of devices.
+    // d = 100_000_000 # "days" (possible IDs)
+    // 1-math.e**(-(n-(n-1))/(d*2))
+    // # 4.999999969612645e-09
+    // ```
+    //
+    // https://en.wikipedia.org/wiki/Birthday_problem#Approximations
+    let session_id = get_random() % 100_000_000;
+    dump_file("id", &session_id.to_le_bytes());
+    session_id
 }
 
 fn update_wifi(state: &mut State) {
@@ -124,7 +162,8 @@ fn load_addr() -> SocketAddrV4 {
     if size > 0 {
         let mut buf = vec![0; size];
         load_file("addr", &mut buf);
-        let buf = unsafe { alloc::str::from_utf8_unchecked(&buf) };
+        let buf = buf.trim_ascii();
+        let buf = unsafe { alloc::str::from_utf8_unchecked(buf) };
         if let Ok(addr) = SocketAddrV4::from_str(buf) {
             return addr;
         }
