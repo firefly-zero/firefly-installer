@@ -29,6 +29,11 @@ pub fn update(state: &mut State) {
             }
         }
         Input::Select => {
+            if state.wifi_state != WifiState::Failed {
+                state.wifi_wait = 0;
+                wifi::connect(&state.ssid, &state.password.text);
+                state.wifi_state = WifiState::Connecting;
+            }
             if state.rom_state == RomState::Done {
                 quit();
                 return;
