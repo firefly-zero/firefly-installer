@@ -76,19 +76,13 @@ pub fn get_state() -> &'static mut State {
 
 pub fn load_state() {
     let font = load_file_buf("ascii").unwrap();
-    let password = option_env!("WIFI_PASSWORD").unwrap_or_default();
-    let password = String::from(password);
-    let kbd_opts = firefly_keyboard::Options {
-        text: password,
-        ..Default::default()
-    };
     let state = State {
         font,
         settings: get_settings(get_me()),
         points: Vec::new(),
         rendered_message: false,
         ssid: String::new(),
-        password: Keyboard::new(kbd_opts),
+        password: Keyboard::default(),
         session_id: String::new(),
         scene: Scene::Points,
         cursor: 0,

@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use core::net::{Ipv4Addr, SocketAddrV4};
 use firefly_rust::*;
 
@@ -48,7 +49,10 @@ fn update_wifi(state: &mut State) {
                     }
                 }
                 wifi::Status::Initializing => WifiState::ObtainingIP,
-                wifi::Status::Connected => WifiState::Connected,
+                wifi::Status::Connected => {
+                    save_password(&state.ssid, &state.password.text);
+                    WifiState::Connected
+                }
             };
         }
         WifiState::Connected => {
@@ -63,6 +67,15 @@ fn update_wifi(state: &mut State) {
         }
         WifiState::Failed => {}
     }
+}
+
+/// Save the given SSID and password in a data file.
+fn save_password(ssid: &str, pass: &str) {
+    let mut buf: Vec<u8> = Vec::new();
+    buf.extend(ssid.as_bytes());
+    buf.push(10); // 10 is '\n'.
+    buf.extend(pass.as_bytes());
+    dump_file("creds", &buf);
 }
 
 fn update_tcp(state: &mut State) {

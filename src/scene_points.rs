@@ -1,6 +1,6 @@
 //! Scene showing the list of WiFi access points.
 use crate::*;
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 use firefly_rust::*;
 
 pub fn update(state: &mut State) {
@@ -29,6 +29,9 @@ pub fn update(state: &mut State) {
         }
         Input::Select => {
             state.ssid = state.points[state.cursor].clone();
+            if let Some(pass) = load_password(&state.ssid) {
+                state.password.text = pass;
+            }
             state.transition(Scene::Password);
         }
         Input::Back => quit(),
@@ -51,6 +54,30 @@ fn scan_points(state: &mut State) {
     }
 }
 
+/// Save the stored password, if any, for the given wifi AP SSID.
+///
+/// Might be an empty string if the network is public.
+fn load_password(ssid: &str) -> Option<String> {
+    let size = get_file_size("creds");
+    let mut buf = vec![0u8; size];
+    load_file("creds", &mut buf[..]);
+    let ssid = ssid.as_bytes();
+    let buf = buf.trim_ascii();
+    if buf.len() < ssid.len() + 1 {
+        return None;
+    }
+    let (buf_ssid, pass) = buf.split_at(ssid.len());
+    if buf_ssid != ssid {
+        return None;
+    }
+    // 10 is '\n'
+    if pass[0] != 10 {
+        return None;
+    }
+    let pass = alloc::str::from_utf8(&pass[1..]).ok()?;
+    Some(String::from(pass))
+}
+
 /// Add new APs to the end of the APs list, avoiding duplicates.
 fn merge_points(old_points: &mut Vec<String>, new_points: Vec<String>) {
     for point in new_points {
@@ -61,7 +88,7 @@ fn merge_points(old_points: &mut Vec<String>, new_points: Vec<String>) {
 }
 
 /// Good old bubble sort. Slower but much smaller than the built-in sort function.
-pub fn bubble_sort(items: &mut [String]) {
+fn bubble_sort(items: &mut [String]) {
     let len = items.len();
     if len <= 1 {
         return;
@@ -79,7 +106,7 @@ pub fn bubble_sort(items: &mut [String]) {
 }
 
 /// Case-insensitive comparison of two ASCII strings.
-pub fn ascii_gt(s1: &str, s2: &str) -> bool {
+fn ascii_gt(s1: &str, s2: &str) -> bool {
     for (c1, c2) in s1.as_bytes().iter().zip(s2.as_bytes()) {
         let c1 = c1.to_ascii_lowercase();
         let c2 = c2.to_ascii_lowercase();
