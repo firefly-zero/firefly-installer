@@ -9,6 +9,39 @@ use firefly_rust::*;
 use crate::*;
 
 pub fn update(state: &mut State) {
+    match state.input.get() {
+        Input::Back => {
+            // If wifi connection in progress or failed,
+            // go back to the password input.
+            if state.wifi_state != WifiState::Connected {
+                if state.wifi_state != WifiState::Failed {
+                    wifi::disconnect();
+                }
+                state.transition(Scene::Password);
+                return;
+            }
+            // If there is no file download in progress
+            // (either already downloaded or no file was sent),
+            // going back just exits the app.
+            if state.rom_state != RomState::Downloading {
+                quit();
+                return;
+            }
+        }
+        Input::Select => {
+            if state.rom_state == RomState::Done {
+                quit();
+                return;
+            }
+        }
+        _ => {}
+    }
+
+    // If an app is already installed, there is nothing else to do.
+    if state.rom_state == RomState::Done {
+        return;
+    }
+
     update_wifi(state);
     if state.wifi_state != WifiState::Connected {
         return;
@@ -237,10 +270,10 @@ pub fn render(state: &mut State) {
     let rom_msg = match state.rom_state {
         RomState::NoResponse => return,
         RomState::Downloading => "4. Downloading...",
-        RomState::Done => "4. Downloaded.",
+        RomState::Done => "4. Installed.",
         RomState::Failed => "4. Download failed.",
     };
-    draw_line(4, rom_msg, &font, color);
+    draw_line(5, rom_msg, &font, color);
 }
 
 fn draw_line(i: i32, text: &str, font: &Font, color: Color) {
