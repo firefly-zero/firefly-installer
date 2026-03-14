@@ -1,5 +1,9 @@
+use alloc::vec;
 use alloc::vec::Vec;
-use core::net::{Ipv4Addr, SocketAddrV4};
+use core::{
+    net::{Ipv4Addr, SocketAddrV4},
+    str::FromStr,
+};
 use firefly_rust::*;
 
 use crate::*;
@@ -82,9 +86,7 @@ fn update_tcp(state: &mut State) {
     state.tcp_wait = usize::min(state.tcp_wait + 1, 400);
     match state.tcp_state {
         TcpState::NotConnected => {
-            let ip = Ipv4Addr::new(192, 168, 2, 6);
-            let port = 19743;
-            let addr = SocketAddrV4::new(ip, port);
+            let addr = load_addr();
             wifi::tcp_connect(addr);
             state.tcp_state = TcpState::Connecting;
         }
@@ -108,6 +110,29 @@ fn update_tcp(state: &mut State) {
         }
         TcpState::Failed => {}
     }
+}
+
+/// Read server address (IP v4 + port) from the data file.
+///
+/// Defaults to the IP address of our install.fireflyzero.com server.
+///
+/// We never write the data file. It can only be created manually
+/// by the "advanced" user. We might add it to advanced settings
+/// in the future.
+fn load_addr() -> SocketAddrV4 {
+    let size = get_file_size("addr");
+    if size > 0 {
+        let mut buf = vec![0; size];
+        load_file("addr", &mut buf);
+        let buf = unsafe { alloc::str::from_utf8_unchecked(&buf) };
+        if let Ok(addr) = SocketAddrV4::from_str(buf) {
+            return addr;
+        }
+    }
+
+    let ip = Ipv4Addr::new(192, 168, 2, 6);
+    let port = 19743;
+    SocketAddrV4::new(ip, port)
 }
 
 fn update_rom(state: &mut State) {

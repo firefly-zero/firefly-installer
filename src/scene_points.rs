@@ -54,9 +54,12 @@ fn scan_points(state: &mut State) {
     }
 }
 
-/// Save the stored password, if any, for the given wifi AP SSID.
+/// Load the stored password, if any, for the given wifi AP SSID.
 ///
 /// Might be an empty string if the network is public.
+///
+/// The password (together with SSID) is stored in a data file.
+/// Only the latest password for the latest used AP is stored.
 fn load_password(ssid: &str) -> Option<String> {
     let size = get_file_size("creds");
     let mut buf = vec![0u8; size];
