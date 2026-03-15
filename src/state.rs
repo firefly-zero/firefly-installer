@@ -65,6 +65,8 @@ impl State {
         self.rendered_message = false;
         self.cursor = 0;
         self.wifi_wait = 0;
+        self.tcp_wait = 0;
+        self.show_password = 0;
         self.scene = scene;
     }
 }

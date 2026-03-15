@@ -8,6 +8,9 @@ firefly-keyboard = "0.1.1"
 firefly-rust = { version = "0.13.0", features = ["alloc", "talc", "sudo"] }
 firefly-ui = "0.1.0"
 
+[patch.crates-io]
+firefly-rust = { path = "../firefly-rust" }
+
 # https://github.com/johnthagen/min-sized-rust
 [profile.release]
 strip = true    # Automatically strip symbols from the binary.

@@ -81,12 +81,13 @@ impl Installer {
                     let Some(name) = self.pop_string(*size) else {
                         break;
                     };
-                    if self.author_id.is_none() {
+                    let Some(author_id) = self.author_id.as_ref() else {
                         self.author_id = Some(name);
                         self.file = FileStatus::Waiting;
                         continue;
-                    }
+                    };
                     if self.app_id.is_none() {
+                        create_rom_dir(author_id, &name);
                         self.app_id = Some(name);
                         self.file = FileStatus::Waiting;
                         continue;
@@ -153,4 +154,33 @@ impl Installer {
         }
         Some(res)
     }
+}
+
+/// Remove the old ROM (if any) and create an empty dir for the new ROM.
+fn create_rom_dir(author_id: &str, app_id: &str) {
+    let author_path = alloc::format!("roms/{author_id}");
+    let rom_path = alloc::format!("{author_path}/{app_id}");
+    let bin_path = alloc::format!("{rom_path}/_bin");
+    if sudo::get_file_size(&bin_path) != 0 {
+        let files = sudo::DirBuf::list_files(&rom_path);
+        for file_path in files.iter() {
+            sudo::remove_file(file_path);
+        }
+    } else {
+        if author_path != "sys" {
+            sudo::create_dir(&author_path);
+        }
+        sudo::create_dir(&rom_path);
+    }
+}
+
+fn post_install(author_id: &str, app_id: &str) {
+    // TODO: create data dir
+    // TODO: write stats
+    // TODO: reset launcher cache
+
+    // Unlike in firefly-cli, here we don't need
+    // to write `/sys/new-app` or `sys/launcher`.
+    // If the user launches "sys.installer",
+    // we assume that they already have a working launcher installed.
 }
