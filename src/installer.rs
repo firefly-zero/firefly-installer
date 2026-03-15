@@ -175,9 +175,22 @@ fn create_rom_dir(author_id: &str, app_id: &str) {
 }
 
 fn post_install(author_id: &str, app_id: &str) {
-    // TODO: create data dir
-    // TODO: write stats
-    // TODO: reset launcher cache
+    let data_path = alloc::format!("data/{author_id}/{app_id}");
+    sudo::create_dir(&data_path);
+    let etc_path = alloc::format!("{data_path}/etc");
+    sudo::create_dir(&etc_path);
+    let shots_path = alloc::format!("{data_path}/shots");
+    sudo::create_dir(&shots_path);
+
+    let stats_path = alloc::format!("{data_path}/stats");
+    if sudo::get_file_size(&stats_path) == 0 {
+        // Create stats
+    } else {
+        // Update stats
+    }
+
+    let cache_path = "data/sys/launcher/etc/metas";
+    sudo::remove_file(cache_path);
 
     // Unlike in firefly-cli, here we don't need
     // to write `/sys/new-app` or `sys/launcher`.
