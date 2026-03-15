@@ -1,6 +1,7 @@
 use alloc::collections::VecDeque;
 use alloc::string::String;
 use alloc::vec::Vec;
+use firefly_types::Encode;
 
 use crate::*;
 
@@ -148,11 +149,12 @@ impl Installer {
         let today = ((today >> 16) as u16, (today >> 8) as u8, today as u8);
 
         // Handle changes in app stats (badges and scoreboards).
+        let default_path = alloc::format!("rom/{author_id}/{app_id}/_stats");
         let stats_path = alloc::format!("{data_path}/stats");
         if sudo::get_file_size(&stats_path) == 0 {
-            // Create stats
+            create_stats(today, default_path, stats_path);
         } else {
-            // Update stats
+            // TODO: Update stats
         }
 
         let cache_path = "data/sys/launcher/etc/metas";
@@ -194,6 +196,26 @@ impl Installer {
         }
         Some(res)
     }
+}
+
+/// Generate stats from the default template provided by the ROM.
+fn create_stats(today: (u16, u8, u8), default_path: String, stats_path: String) {
+    let raw = sudo::load_file_buf(&default_path).unwrap();
+    let raw = raw.as_bytes();
+    let stats = firefly_types::Stats::decode(raw).unwrap();
+    let stats = firefly_types::Stats {
+        minutes: [0; 4],
+        longest_play: [0; 4],
+        launches: [0; 4],
+        installed_on: today,
+        updated_on: today,
+        launched_on: (0, 0, 0),
+        xp: 0,
+        badges: stats.badges,
+        scores: stats.scores,
+    };
+    let raw = stats.encode_vec().unwrap();
+    sudo::dump_file(&stats_path, &raw);
 }
 
 /// Remove the old ROM (if any) and create an empty dir for the new ROM.

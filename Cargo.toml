@@ -1,12 +1,14 @@
 [package]
 name = "installer"
 version = "0.1.0"
+rust-version = "1.92.0"
 edition = "2024"
 
 [dependencies]
 firefly-keyboard = "0.1.1"
 firefly-rust = { version = "0.13.0", features = ["alloc", "talc", "sudo"] }
 firefly-ui = "0.1.0"
+firefly-types = "0.8.1"
 
 [patch.crates-io]
 firefly-rust = { path = "../firefly-rust" }
