@@ -226,6 +226,7 @@ fn update_rom(state: &mut State) {
                 let chunk = wifi::tcp_recv_buf();
                 state.installer.update(&chunk);
                 if state.installer.done() {
+                    state.installer.finalize();
                     state.rom_state = RomState::Done;
                     break;
                 }

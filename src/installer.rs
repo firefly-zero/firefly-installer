@@ -17,6 +17,7 @@ enum FileStatus {
 
 pub struct Installer {
     protocol: Option<u8>,
+    today: Option<u32>,
     expected_size: Option<u32>,
     received_size: u32,
     author_id: Option<String>,
@@ -29,6 +30,7 @@ impl Installer {
     pub fn new() -> Self {
         Self {
             protocol: None,
+            today: None,
             expected_size: None,
             received_size: 0,
             author_id: None,
@@ -58,6 +60,14 @@ impl Installer {
                     break;
                 };
                 self.protocol = Some(protocol);
+                continue;
+            }
+
+            if self.today.is_none() {
+                let Some(today) = self.pop_u32() else {
+                    break;
+                };
+                self.today = Some(today);
                 continue;
             }
 
@@ -124,6 +134,36 @@ impl Installer {
         }
     }
 
+    pub fn finalize(&self) {
+        let author_id = self.author_id.as_ref().unwrap();
+        let app_id = self.app_id.as_ref().unwrap();
+        let data_path = alloc::format!("data/{author_id}/{app_id}");
+        sudo::create_dir(&data_path);
+        let etc_path = alloc::format!("{data_path}/etc");
+        sudo::create_dir(&etc_path);
+        let shots_path = alloc::format!("{data_path}/shots");
+        sudo::create_dir(&shots_path);
+
+        let today = self.today.unwrap();
+        let today = ((today >> 16) as u16, (today >> 8) as u8, today as u8);
+
+        // Handle changes in app stats (badges and scoreboards).
+        let stats_path = alloc::format!("{data_path}/stats");
+        if sudo::get_file_size(&stats_path) == 0 {
+            // Create stats
+        } else {
+            // Update stats
+        }
+
+        let cache_path = "data/sys/launcher/etc/metas";
+        sudo::remove_file(cache_path);
+
+        // Unlike in firefly-cli, here we don't need
+        // to write `/sys/new-app` or `sys/launcher`.
+        // If the user launches "sys.installer",
+        // we assume that they already have a working launcher installed.
+    }
+
     fn pop_u32(&mut self) -> Option<u32> {
         if self.buf.len() < 4 {
             return None;
@@ -172,28 +212,4 @@ fn create_rom_dir(author_id: &str, app_id: &str) {
         }
         sudo::create_dir(&rom_path);
     }
-}
-
-fn post_install(author_id: &str, app_id: &str) {
-    let data_path = alloc::format!("data/{author_id}/{app_id}");
-    sudo::create_dir(&data_path);
-    let etc_path = alloc::format!("{data_path}/etc");
-    sudo::create_dir(&etc_path);
-    let shots_path = alloc::format!("{data_path}/shots");
-    sudo::create_dir(&shots_path);
-
-    let stats_path = alloc::format!("{data_path}/stats");
-    if sudo::get_file_size(&stats_path) == 0 {
-        // Create stats
-    } else {
-        // Update stats
-    }
-
-    let cache_path = "data/sys/launcher/etc/metas";
-    sudo::remove_file(cache_path);
-
-    // Unlike in firefly-cli, here we don't need
-    // to write `/sys/new-app` or `sys/launcher`.
-    // If the user launches "sys.installer",
-    // we assume that they already have a working launcher installed.
 }
