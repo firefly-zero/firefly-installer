@@ -37,7 +37,7 @@ pub enum RomState {
     NoResponse,
     Downloading,
     Done,
-    Failed,
+    Failed(&'static str),
 }
 
 pub struct State {
@@ -137,6 +137,7 @@ fn load_creds() -> Option<(String, String)> {
     Some(creds)
 }
 
+/// Split the string once at the given character.
 fn split_by(input: &str, sep: char) -> Option<(&str, &str)> {
     let mut split_at = None;
     let sep: u8 = sep.try_into().unwrap();

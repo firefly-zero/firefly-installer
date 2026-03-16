@@ -228,8 +228,12 @@ fn update_rom(state: &mut State) {
                 let chunk = wifi::tcp_recv_buf();
                 state.installer.update(&chunk);
                 if state.installer.done() {
-                    state.installer.finalize();
-                    state.rom_state = RomState::Done;
+                    let res = state.installer.finalize();
+                    state.rom_state = if let Err(err) = res {
+                        RomState::Failed(err)
+                    } else {
+                        RomState::Done
+                    };
                     break;
                 }
                 if chunk.is_empty() {
@@ -238,7 +242,7 @@ fn update_rom(state: &mut State) {
             }
         }
         RomState::Done => {}
-        RomState::Failed => {}
+        RomState::Failed(_) => {}
     }
 }
 
@@ -253,7 +257,7 @@ pub fn render(state: &mut State) {
         WifiState::Connected => "1. Connected to internet.",
         WifiState::Failed => "1. Failed to connect to internet.",
     };
-    draw_line(1, wifi_msg, &font, color);
+    draw_text_line(1, wifi_msg, &font, color);
     if state.wifi_state != WifiState::Connected {
         return;
     }
@@ -263,13 +267,13 @@ pub fn render(state: &mut State) {
         TcpState::Connected => "2. Connected to server.",
         TcpState::Failed => "2. Failed to connect to server.",
     };
-    draw_line(2, tcp_msg, &font, color);
+    draw_text_line(2, tcp_msg, &font, color);
 
     if state.session_id.is_empty() {
         return;
     }
     let id_msg = "3. Session created. ID:";
-    draw_line(3, id_msg, &font, color);
+    draw_text_line(3, id_msg, &font, color);
     {
         let point = Point::new(38, 12 + 13 * 4);
         draw_text(&state.session_id, &font, point, theme.accent);
@@ -279,12 +283,16 @@ pub fn render(state: &mut State) {
         RomState::NoResponse => return,
         RomState::Downloading => "4. Downloading...",
         RomState::Done => "4. Installed.",
-        RomState::Failed => "4. Download failed.",
+        RomState::Failed(err) => {
+            let point = Point::new(38, 12 + 13 * 6);
+            draw_text(err, &font, point, theme.accent);
+            "4. Download failed:"
+        }
     };
-    draw_line(5, rom_msg, &font, color);
+    draw_text_line(5, rom_msg, &font, color);
 }
 
-fn draw_line(i: i32, text: &str, font: &Font, color: Color) {
+fn draw_text_line(i: i32, text: &str, font: &Font, color: Color) {
     let point = Point::new(20, 12 + 13 * i);
     draw_text(text, font, point, color);
 }

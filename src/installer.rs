@@ -123,11 +123,9 @@ impl Installer {
                         unreachable!()
                     };
                     self.received_size += size;
-                    let path = alloc::format!(
-                        "roms/{}/{}/{name}",
-                        self.author_id.as_ref().unwrap(),
-                        self.app_id.as_ref().unwrap()
-                    );
+                    let author_id = self.author_id.as_ref().unwrap();
+                    let app_id = self.app_id.as_ref().unwrap();
+                    let path = alloc::format!("roms/{}/{}/{name}", author_id, app_id);
                     sudo::dump_file(&path, &content);
                     self.file = FileStatus::Waiting;
                 }
@@ -135,9 +133,13 @@ impl Installer {
         }
     }
 
-    pub fn finalize(&self) {
+    pub fn finalize(&self) -> Result<(), &'static str> {
         let author_id = self.author_id.as_ref().unwrap();
         let app_id = self.app_id.as_ref().unwrap();
+        let rom_path = alloc::format!("roms/{author_id}/{app_id}");
+        check_rom(&rom_path)?;
+
+        // Create data directories.
         let data_path = alloc::format!("data/{author_id}/{app_id}");
         sudo::create_dir(&data_path);
         let etc_path = alloc::format!("{data_path}/etc");
@@ -145,25 +147,48 @@ impl Installer {
         let shots_path = alloc::format!("{data_path}/shots");
         sudo::create_dir(&shots_path);
 
+        // Ensure that the data dir is created and writable.
+        let tmp_path = alloc::format!("{etc_path}/_tmp");
+        sudo::dump_file(&tmp_path, &[1]);
+        if sudo::get_file_size(&tmp_path) == 0 {
+            return Err("failed to create app data dir");
+        }
+        sudo::remove_file(&tmp_path);
+        if sudo::get_file_size(&tmp_path) != 0 {
+            return Err("failed to clean up app data dir");
+        }
+
         let today = self.today.unwrap();
         let today = ((today >> 16) as u16, (today >> 8) as u8, today as u8);
+        if today.0 < 2024 || today.0 > 3000 {
+            return Err("invalid date received from server");
+        }
 
         // Handle changes in app stats (badges and scoreboards).
-        let default_path = alloc::format!("rom/{author_id}/{app_id}/_stats");
+        let default_path = alloc::format!("{rom_path}/_stats");
         let stats_path = alloc::format!("{data_path}/stats");
         if sudo::get_file_size(&stats_path) == 0 {
-            create_stats(today, default_path, stats_path);
+            create_stats(today, &default_path, &stats_path)?;
         } else {
             // TODO: Update stats
         }
+        if sudo::get_file_size(&stats_path) == 0 {
+            return Err("failed to bootstrap app stats");
+        }
 
+        // Clear launcher cache.
         let cache_path = "data/sys/launcher/etc/metas";
         sudo::remove_file(cache_path);
+        if sudo::get_file_size(cache_path) != 0 {
+            return Err("failed to reset launcher cache");
+        }
 
         // Unlike in firefly-cli, here we don't need
         // to write `/sys/new-app` or `sys/launcher`.
         // If the user launches "sys.installer",
         // we assume that they already have a working launcher installed.
+
+        Ok(())
     }
 
     fn pop_u32(&mut self) -> Option<u32> {
@@ -198,11 +223,40 @@ impl Installer {
     }
 }
 
+/// Check that the given ROM directory has all required files.
+fn check_rom(rom_path: &str) -> Result<(), &'static str> {
+    let bin_path = alloc::format!("{rom_path}/_bin");
+    if sudo::get_file_size(&bin_path) == 0 {
+        return Err("failed to write ROM");
+    }
+    let bin_path = alloc::format!("{rom_path}/_meta");
+    if sudo::get_file_size(&bin_path) == 0 {
+        return Err("ROM has no metadata");
+    }
+    let bin_path = alloc::format!("{rom_path}/_hash");
+    if sudo::get_file_size(&bin_path) == 0 {
+        return Err("ROM has no hash");
+    }
+    let bin_path = alloc::format!("{rom_path}/_stats");
+    if sudo::get_file_size(&bin_path) == 0 {
+        return Err("ROM has no achievements info");
+    }
+    Ok(())
+}
+
 /// Generate stats from the default template provided by the ROM.
-fn create_stats(today: (u16, u8, u8), default_path: String, stats_path: String) {
-    let raw = sudo::load_file_buf(&default_path).unwrap();
+fn create_stats(
+    today: (u16, u8, u8),
+    default_path: &str,
+    stats_path: &str,
+) -> Result<(), &'static str> {
+    let Some(raw) = sudo::load_file_buf(default_path) else {
+        return Err("cannot access achievements info from the app");
+    };
     let raw = raw.as_bytes();
-    let stats = firefly_types::Stats::decode(raw).unwrap();
+    let Ok(stats) = firefly_types::Stats::decode(raw) else {
+        return Err("failed to parse the app achievements info");
+    };
     let stats = firefly_types::Stats {
         minutes: [0; 4],
         longest_play: [0; 4],
@@ -214,8 +268,11 @@ fn create_stats(today: (u16, u8, u8), default_path: String, stats_path: String) 
         badges: stats.badges,
         scores: stats.scores,
     };
-    let raw = stats.encode_vec().unwrap();
-    sudo::dump_file(&stats_path, &raw);
+    let Ok(raw) = stats.encode_vec() else {
+        return Err("failed to serialize achievements info");
+    };
+    sudo::dump_file(stats_path, &raw);
+    Ok(())
 }
 
 /// Remove the old ROM (if any) and create an empty dir for the new ROM.
