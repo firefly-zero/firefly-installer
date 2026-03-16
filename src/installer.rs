@@ -124,7 +124,7 @@ impl Installer {
                     };
                     self.received_size += size;
                     let path = alloc::format!(
-                        "rom/{}/{}/{name}",
+                        "roms/{}/{}/{name}",
                         self.author_id.as_ref().unwrap(),
                         self.app_id.as_ref().unwrap()
                     );

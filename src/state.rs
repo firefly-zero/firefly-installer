@@ -1,5 +1,6 @@
 use crate::*;
 use alloc::string::String;
+use alloc::vec;
 use alloc::vec::Vec;
 use core::cell::OnceCell;
 use firefly_keyboard::Keyboard;
@@ -44,14 +45,16 @@ pub struct State {
     pub settings: Settings,
     pub points: Vec<String>,
     pub rendered_message: bool,
-    pub ssid: String,
-    pub password: Keyboard,
     pub session_id: String,
     pub scene: Scene,
     pub cursor: usize,
     pub input: InputManager,
     pub installer: Installer,
+
+    pub ssid: String,
+    pub password: Keyboard,
     pub show_password: u8,
+    pub saved: Option<(String, String)>,
 
     pub wifi_state: WifiState,
     pub wifi_wait: usize,
@@ -78,15 +81,30 @@ pub fn get_state() -> &'static mut State {
 
 pub fn load_state() {
     let font = load_file_buf("ascii").unwrap();
+
+    // If there is already saved SSID+password for an AP,
+    // go to the connection directly. If that doesn't work,
+    // the user can always go back to the previous screens.
+    let saved = load_creds();
+    let mut ssid = String::new();
+    let mut password = Keyboard::default();
+    let mut scene = Scene::Points;
+    if let Some((saved_ssid, saved_pass)) = saved.as_ref() {
+        ssid = saved_ssid.clone();
+        password.text = saved_pass.clone();
+        scene = Scene::Connection;
+    }
+
     let state = State {
         font,
         settings: get_settings(get_me()),
         points: Vec::new(),
         rendered_message: false,
-        ssid: String::new(),
-        password: Keyboard::default(),
+        ssid,
+        password,
+        saved,
         session_id: String::new(),
-        scene: Scene::Points,
+        scene,
         cursor: 0,
         show_password: 0,
         input: InputManager::new(),
@@ -100,4 +118,34 @@ pub fn load_state() {
     };
     #[allow(static_mut_refs)]
     unsafe { STATE.set(state) }.ok().unwrap();
+}
+
+/// Load the stored SSID+password, if any, for the latest wifi AP.
+///
+/// The password might be an empty string if the network is public.
+///
+/// The credentials are stored in a data file.
+/// Only the latest password for the latest used AP is stored.
+fn load_creds() -> Option<(String, String)> {
+    let size = get_file_size("creds");
+    let mut buf = vec![0u8; size];
+    load_file("creds", &mut buf[..]);
+    let raw = buf.trim_ascii();
+    let raw = alloc::str::from_utf8(&raw[1..]).ok()?;
+    let (ssid, pass) = split_by(raw, '\n')?;
+    let creds = (String::from(ssid), String::from(pass));
+    Some(creds)
+}
+
+fn split_by(input: &str, sep: char) -> Option<(&str, &str)> {
+    let mut split_at = None;
+    let sep: u8 = sep.try_into().unwrap();
+    for (i, ch) in input.bytes().enumerate() {
+        if ch == sep {
+            split_at = Some(i);
+            break;
+        }
+    }
+    let split_at = split_at?;
+    Some(input.split_at(split_at))
 }

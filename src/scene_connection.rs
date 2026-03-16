@@ -130,7 +130,7 @@ fn update_wifi(state: &mut State) {
                 }
                 wifi::Status::Initializing => WifiState::ObtainingIP,
                 wifi::Status::Connected => {
-                    save_password(&state.ssid, &state.password.text);
+                    save_creds(&state.ssid, &state.password.text);
                     WifiState::Connected
                 }
             };
@@ -150,7 +150,9 @@ fn update_wifi(state: &mut State) {
 }
 
 /// Save the given SSID and password in a data file.
-fn save_password(ssid: &str, pass: &str) {
+///
+/// It will be loaded on the next launch by `load_creds`.
+fn save_creds(ssid: &str, pass: &str) {
     let mut buf: Vec<u8> = Vec::new();
     buf.extend(ssid.as_bytes());
     buf.push(10); // 10 is '\n'.

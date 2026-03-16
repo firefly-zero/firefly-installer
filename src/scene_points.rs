@@ -1,6 +1,6 @@
 //! Scene showing the list of WiFi access points.
 use crate::*;
-use alloc::{string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 use firefly_rust::*;
 
 pub fn update(state: &mut State) {
@@ -29,8 +29,12 @@ pub fn update(state: &mut State) {
         }
         Input::Select => {
             state.ssid = state.points[state.cursor].clone();
-            if let Some(pass) = load_password(&state.ssid) {
-                state.password.text = pass;
+            // Prefill the password input with
+            // the password for the selected AP.
+            if let Some((ssid, pass)) = state.saved.as_ref()
+                && ssid == &state.ssid
+            {
+                state.password.text = pass.clone();
             }
             state.transition(Scene::Password);
         }
@@ -52,33 +56,6 @@ fn scan_points(state: &mut State) {
     if state.points.len() > state.cursor + 1 {
         bubble_sort(&mut state.points[state.cursor + 1..]);
     }
-}
-
-/// Load the stored password, if any, for the given wifi AP SSID.
-///
-/// Might be an empty string if the network is public.
-///
-/// The password (together with SSID) is stored in a data file.
-/// Only the latest password for the latest used AP is stored.
-fn load_password(ssid: &str) -> Option<String> {
-    let size = get_file_size("creds");
-    let mut buf = vec![0u8; size];
-    load_file("creds", &mut buf[..]);
-    let ssid = ssid.as_bytes();
-    let buf = buf.trim_ascii();
-    if buf.len() < ssid.len() + 1 {
-        return None;
-    }
-    let (buf_ssid, pass) = buf.split_at(ssid.len());
-    if buf_ssid != ssid {
-        return None;
-    }
-    // 10 is '\n'
-    if pass[0] != 10 {
-        return None;
-    }
-    let pass = alloc::str::from_utf8(&pass[1..]).ok()?;
-    Some(String::from(pass))
 }
 
 /// Add new APs to the end of the APs list, avoiding duplicates.
