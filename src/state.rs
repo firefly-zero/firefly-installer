@@ -1,6 +1,5 @@
 use crate::*;
 use alloc::string::String;
-use alloc::vec;
 use alloc::vec::Vec;
 use core::cell::OnceCell;
 use firefly_keyboard::Keyboard;
@@ -127,11 +126,10 @@ pub fn load_state() {
 /// The credentials are stored in a data file.
 /// Only the latest password for the latest used AP is stored.
 fn load_creds() -> Option<(String, String)> {
-    let size = get_file_size("creds");
-    let mut buf = vec![0u8; size];
-    load_file("creds", &mut buf[..]);
-    let raw = buf.trim_ascii();
-    let raw = alloc::str::from_utf8(&raw[1..]).ok()?;
+    let raw = load_file_buf("creds")?;
+    let raw = raw.as_bytes();
+    let raw = raw.trim_ascii();
+    let raw = alloc::str::from_utf8(raw).ok()?;
     let (ssid, pass) = split_by(raw, '\n')?;
     let creds = (String::from(ssid), String::from(pass));
     Some(creds)
@@ -148,5 +146,6 @@ fn split_by(input: &str, sep: char) -> Option<(&str, &str)> {
         }
     }
     let split_at = split_at?;
-    Some(input.split_at(split_at))
+    let (left, right) = input.split_at(split_at);
+    Some((left, &right[1..]))
 }

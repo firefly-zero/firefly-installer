@@ -34,7 +34,7 @@ dependencies = [
 
 [[package]]
 name = "firefly-rust"
-version = "0.13.0"
+version = "0.13.1"
 dependencies = [
  "talc",
 ]
