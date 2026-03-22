@@ -2,6 +2,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use alloc::{boxed::Box, collections::VecDeque};
 use firefly_types::{BadgeProgress, BoardScores, Encode, FriendScore, Stats};
+use sha2::{Digest, Sha256};
 
 use crate::*;
 
@@ -25,6 +26,7 @@ pub struct Installer {
     app_id: Option<String>,
     file: FileStatus,
     buf: VecDeque<u8>,
+    hasher: Sha256,
 }
 
 impl Installer {
@@ -38,6 +40,7 @@ impl Installer {
             app_id: None,
             file: FileStatus::Waiting,
             buf: VecDeque::new(),
+            hasher: Sha256::new(),
         }
     }
 
@@ -122,6 +125,12 @@ impl Installer {
                     let FileStatus::BodySize(name, size) = &self.file else {
                         unreachable!()
                     };
+                    if name != "_hash" {
+                        self.hasher.update("\x00");
+                        self.hasher.update(name.as_bytes());
+                        self.hasher.update("\x00");
+                        self.hasher.update(&content);
+                    }
                     self.received_size += size;
                     let author_id = self.author_id.as_ref().unwrap();
                     let app_id = self.app_id.as_ref().unwrap();
@@ -133,11 +142,24 @@ impl Installer {
         }
     }
 
-    pub fn finalize(&self) -> Result<(), &'static str> {
+    pub fn finalize(&mut self) -> Result<(), &'static str> {
         let author_id = self.author_id.as_ref().unwrap();
         let app_id = self.app_id.as_ref().unwrap();
         let rom_path = alloc::format!("roms/{author_id}/{app_id}");
         check_rom(&rom_path)?;
+
+        // Validate hash.
+        {
+            let hash_path = alloc::format!("{rom_path}/_hash");
+            let Some(exp_hash) = load_file_buf(&hash_path) else {
+                return Err("failed to read ROM hash");
+            };
+            let act_hash = self.hasher.finalize_reset();
+            let act_hash: &[u8] = &act_hash;
+            if act_hash != exp_hash.as_bytes() {
+                return Err("ROM is corrupted (hashsum mismatch)");
+            }
+        }
 
         // Create data directories.
         let data_path = alloc::format!("data/{author_id}/{app_id}");
@@ -158,6 +180,7 @@ impl Installer {
             return Err("failed to clean up app data dir");
         }
 
+        // Create or update stats file.
         let today = self.today.unwrap();
         let today = ((today >> 16) as u16, (today >> 8) as u8, today as u8);
         if today.0 < 2024 || today.0 > 3000 {
