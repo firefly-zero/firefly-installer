@@ -25,9 +25,9 @@ checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
 
 [[package]]
 name = "firefly-keyboard"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c42aa15959b1d1056185cd9e68310951c4b6491ba37abe6d56c689f01b8e9897"
+checksum = "b7a17570a9421628cb08ee7b07abc16be4db4f5ab19ccbfb1c38e548b3a7f55b"
 dependencies = [
  "firefly-rust",
 ]
@@ -51,9 +51,9 @@ dependencies = [
 
 [[package]]
 name = "firefly-ui"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4647c7a4d6275aa891d8a9b5b1b5c5fc2538b664fdfb41ab94c5fe9b5bbba31f"
+checksum = "1bc6512e184e79fa4201e7253b5eea55d142362b71bdd65f67186c07fdb83610"
 dependencies = [
  "firefly-rust",
 ]
