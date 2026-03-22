@@ -17,6 +17,7 @@ pub fn update(state: &mut State) {
                 if state.wifi_state != WifiState::Failed {
                     wifi::disconnect();
                 }
+                state.wifi_state = WifiState::NotConnected;
                 state.transition(Scene::Password);
                 return;
             }

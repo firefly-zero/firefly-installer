@@ -82,7 +82,7 @@ pub fn load_state() {
     let font = load_file_buf("ascii").unwrap();
 
     // If there is already saved SSID+password for an AP,
-    // go to the connection directly. If that doesn't work,
+    // go to the connection scene directly. If that doesn't work,
     // the user can always go back to the previous screens.
     let saved = load_creds();
     let mut ssid = String::new();

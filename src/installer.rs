@@ -151,7 +151,7 @@ impl Installer {
         // Validate hash.
         {
             let hash_path = alloc::format!("{rom_path}/_hash");
-            let Some(exp_hash) = load_file_buf(&hash_path) else {
+            let Some(exp_hash) = sudo::load_file_buf(&hash_path) else {
                 return Err("failed to read ROM hash");
             };
             let act_hash = self.hasher.finalize_reset();
@@ -301,7 +301,7 @@ fn update_stats(
     stats_path: &str,
     today: (u16, u8, u8),
 ) -> Result<Stats, &'static str> {
-    let Some(raw) = load_file_buf(stats_path) else {
+    let Some(raw) = sudo::load_file_buf(stats_path) else {
         return Err("failed to read app stats");
     };
     let Ok(old_stats) = Stats::decode(raw.as_bytes()) else {
