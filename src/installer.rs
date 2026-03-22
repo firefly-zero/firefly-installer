@@ -1,7 +1,7 @@
-use alloc::collections::VecDeque;
 use alloc::string::String;
 use alloc::vec::Vec;
-use firefly_types::Encode;
+use alloc::{boxed::Box, collections::VecDeque};
+use firefly_types::{BadgeProgress, BoardScores, Encode, FriendScore, Stats};
 
 use crate::*;
 
@@ -163,18 +163,7 @@ impl Installer {
         if today.0 < 2024 || today.0 > 3000 {
             return Err("invalid date received from server");
         }
-
-        // Handle changes in app stats (badges and scoreboards).
-        let default_path = alloc::format!("{rom_path}/_stats");
-        let stats_path = alloc::format!("{data_path}/stats");
-        if sudo::get_file_size(&stats_path) == 0 {
-            create_stats(today, &default_path, &stats_path)?;
-        } else {
-            // TODO: Update stats
-        }
-        if sudo::get_file_size(&stats_path) == 0 {
-            return Err("failed to bootstrap app stats");
-        }
+        write_stats(rom_path, data_path, today)?;
 
         // Clear launcher cache.
         let cache_path = "data/sys/launcher/etc/metas";
@@ -223,6 +212,45 @@ impl Installer {
     }
 }
 
+fn write_stats(
+    rom_path: String,
+    data_path: String,
+    today: (u16, u8, u8),
+) -> Result<(), &'static str> {
+    let default_path = alloc::format!("{rom_path}/_stats");
+    let Some(raw) = sudo::load_file_buf(&default_path) else {
+        return Err("cannot access achievements info from the app");
+    };
+    let raw = raw.as_bytes();
+    let Ok(default) = Stats::decode(raw) else {
+        return Err("failed to parse the app achievements info");
+    };
+    let stats_path = alloc::format!("{data_path}/stats");
+    let stats = if sudo::get_file_size(&stats_path) == 0 {
+        Stats {
+            minutes: [0; 4],
+            longest_play: [0; 4],
+            launches: [0; 4],
+            installed_on: today,
+            updated_on: today,
+            launched_on: (0, 0, 0),
+            xp: 0,
+            badges: default.badges,
+            scores: default.scores,
+        }
+    } else {
+        update_stats(&default, &stats_path, today)?
+    };
+    let Ok(raw) = stats.encode_vec() else {
+        return Err("failed to serialize achievements info");
+    };
+    sudo::dump_file(&stats_path, &raw);
+    if sudo::get_file_size(&stats_path) == 0 {
+        return Err("failed to bootstrap app stats");
+    }
+    Ok(())
+}
+
 /// Check that the given ROM directory has all required files.
 fn check_rom(rom_path: &str) -> Result<(), &'static str> {
     let bin_path = alloc::format!("{rom_path}/_bin");
@@ -245,34 +273,67 @@ fn check_rom(rom_path: &str) -> Result<(), &'static str> {
 }
 
 /// Generate stats from the default template provided by the ROM.
-fn create_stats(
-    today: (u16, u8, u8),
-    default_path: &str,
+fn update_stats(
+    default: &Stats,
     stats_path: &str,
-) -> Result<(), &'static str> {
-    let Some(raw) = sudo::load_file_buf(default_path) else {
-        return Err("cannot access achievements info from the app");
+    today: (u16, u8, u8),
+) -> Result<Stats, &'static str> {
+    let Some(raw) = load_file_buf(stats_path) else {
+        return Err("failed to read app stats");
     };
-    let raw = raw.as_bytes();
-    let Ok(stats) = firefly_types::Stats::decode(raw) else {
-        return Err("failed to parse the app achievements info");
+    let Ok(old_stats) = Stats::decode(raw.as_bytes()) else {
+        return Err("failed to parse app stats");
     };
-    let stats = firefly_types::Stats {
-        minutes: [0; 4],
-        longest_play: [0; 4],
-        launches: [0; 4],
-        installed_on: today,
+
+    // The current date might be behind the current date on the device,
+    // and it might be reflected in the dates recorded in the stats.
+    // If that happens, try to stay closer to the device time.
+    let today = today
+        .max(old_stats.installed_on)
+        .max(old_stats.launched_on)
+        .max(old_stats.updated_on);
+
+    let mut badges = Vec::new();
+    for (i, default_badge) in default.badges.iter().enumerate() {
+        let new_badge = if let Some(old_badge) = old_stats.badges.get(i) {
+            BadgeProgress {
+                new: old_badge.new,
+                done: old_badge.done.min(default_badge.goal),
+                goal: default_badge.goal,
+            }
+        } else {
+            BadgeProgress {
+                new: false,
+                done: 0,
+                goal: default_badge.goal,
+            }
+        };
+        badges.push(new_badge);
+    }
+
+    let mut scores = Vec::from(old_stats.scores);
+    scores.truncate(default.scores.len());
+    for _ in scores.len()..default.scores.len() {
+        let fs = FriendScore { index: 0, score: 0 };
+        let new_score = BoardScores {
+            me: Box::new([0i16; 8]),
+            friends: Box::new([fs; 8]),
+        };
+        scores.push(new_score);
+    }
+
+    let new_stats = Stats {
+        minutes: old_stats.minutes,
+        longest_play: old_stats.longest_play,
+        launches: old_stats.launches,
+        installed_on: old_stats.installed_on,
         updated_on: today,
-        launched_on: (0, 0, 0),
-        xp: 0,
-        badges: stats.badges,
-        scores: stats.scores,
+        launched_on: old_stats.launched_on,
+        xp: old_stats.xp.min(1000),
+        badges: badges.into_boxed_slice(),
+        scores: scores.into_boxed_slice(),
     };
-    let Ok(raw) = stats.encode_vec() else {
-        return Err("failed to serialize achievements info");
-    };
-    sudo::dump_file(stats_path, &raw);
-    Ok(())
+    Ok(new_stats)
 }
 
 /// Remove the old ROM (if any) and create an empty dir for the new ROM.
