@@ -1,3 +1,4 @@
+use alloc::str;
 use alloc::string::String;
 use alloc::vec::Vec;
 use alloc::{boxed::Box, collections::VecDeque};
@@ -18,12 +19,8 @@ enum FileStatus {
 }
 
 pub struct Installer {
-    protocol: Option<u8>,
-    today: Option<u32>,
-    expected_size: Option<u32>,
+    headers: Option<RespHeaders>,
     received_size: u32,
-    author_id: Option<String>,
-    app_id: Option<String>,
     file: FileStatus,
     buf: VecDeque<u8>,
     hasher: Sha256,
@@ -32,12 +29,8 @@ pub struct Installer {
 impl Installer {
     pub fn new() -> Self {
         Self {
-            protocol: None,
-            today: None,
-            expected_size: None,
+            headers: None,
             received_size: 0,
-            author_id: None,
-            app_id: None,
             file: FileStatus::Waiting,
             buf: VecDeque::new(),
             hasher: Sha256::new(),
@@ -48,8 +41,8 @@ impl Installer {
         if !self.buf.is_empty() {
             return false;
         }
-        match self.expected_size {
-            Some(expected_size) => self.received_size >= expected_size,
+        match &self.headers {
+            Some(headers) => self.received_size >= headers.expected_size,
             None => false,
         }
     }
@@ -58,30 +51,18 @@ impl Installer {
     pub fn update(&mut self, chunk: &[u8]) {
         self.buf.extend(chunk);
         loop {
-            // Parse protocol version.
-            if self.protocol.is_none() {
-                let Some(protocol) = self.buf.pop_front() else {
+            if self.headers.is_none() {
+                let data = self.buf.make_contiguous();
+                let Some(idx) = find_subslice(data, b"\r\n\r\n") else {
                     break;
                 };
-                self.protocol = Some(protocol);
-                continue;
-            }
-
-            if self.today.is_none() {
-                let Some(today) = self.pop_u32() else {
-                    break;
-                };
-                self.today = Some(today);
-                continue;
-            }
-
-            // Parse the expected total size of files.
-            if self.expected_size.is_none() {
-                let Some(expected_size) = self.pop_u32() else {
-                    break;
-                };
-                self.expected_size = Some(expected_size);
-                continue;
+                let rest = self.buf.split_off(idx);
+                let headers = self.buf.make_contiguous();
+                // TODO: propagate error.
+                let headers = RespHeaders::parse(headers).unwrap();
+                create_rom_dir(&headers.author_id, &headers.app_id);
+                self.headers = Some(headers);
+                self.buf = rest;
             }
 
             match &self.file {
@@ -95,17 +76,6 @@ impl Installer {
                     let Some(name) = self.pop_string(*size) else {
                         break;
                     };
-                    let Some(author_id) = self.author_id.as_ref() else {
-                        self.author_id = Some(name);
-                        self.file = FileStatus::Waiting;
-                        continue;
-                    };
-                    if self.app_id.is_none() {
-                        create_rom_dir(author_id, &name);
-                        self.app_id = Some(name);
-                        self.file = FileStatus::Waiting;
-                        continue;
-                    }
                     self.file = FileStatus::Name(name);
                 }
                 FileStatus::Name(name) => {
@@ -132,9 +102,9 @@ impl Installer {
                         self.hasher.update(&content);
                     }
                     self.received_size += size;
-                    let author_id = self.author_id.as_ref().unwrap();
-                    let app_id = self.app_id.as_ref().unwrap();
-                    let path = alloc::format!("roms/{}/{}/{name}", author_id, app_id);
+                    let headers = self.headers.as_ref().unwrap();
+                    let path =
+                        alloc::format!("roms/{}/{}/{name}", headers.author_id, headers.app_id);
                     sudo::dump_file(&path, &content);
                     self.file = FileStatus::Waiting;
                 }
@@ -143,8 +113,9 @@ impl Installer {
     }
 
     pub fn finalize(&mut self) -> Result<(), &'static str> {
-        let author_id = self.author_id.as_ref().unwrap();
-        let app_id = self.app_id.as_ref().unwrap();
+        let headers = self.headers.as_ref().unwrap();
+        let author_id = &headers.author_id;
+        let app_id = &headers.app_id;
         let rom_path = alloc::format!("roms/{author_id}/{app_id}");
         check_rom(&rom_path)?;
 
@@ -181,12 +152,7 @@ impl Installer {
         }
 
         // Create or update stats file.
-        let today = self.today.unwrap();
-        let today = ((today >> 16) as u16, (today >> 8) as u8, today as u8);
-        if today.0 < 2024 || today.0 > 3000 {
-            return Err("invalid date received from server");
-        }
-        write_stats(rom_path, data_path, today)?;
+        write_stats(rom_path, data_path, headers.today)?;
 
         // Clear launcher cache.
         let cache_path = "data/sys/launcher/etc/metas";
@@ -233,6 +199,14 @@ impl Installer {
         }
         Some(res)
     }
+}
+
+fn find_subslice<T: PartialEq>(data: &[T], needle: &[T]) -> Option<usize> {
+    // https://github.com/rust-lang/rust/issues/54961
+    data.windows(needle.len())
+        .enumerate()
+        .find(|&(_, w)| w == needle)
+        .map(|(i, _)| i)
 }
 
 fn write_stats(

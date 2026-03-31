@@ -59,8 +59,13 @@ pub fn update(state: &mut State) {
 
     if state.session_id.is_empty() {
         let session_id = load_session_id();
-        wifi::tcp_send(&session_id.to_le_bytes()[..]);
         let mut session_id = alloc::format!("{session_id:08}");
+
+        wifi::tcp_send("POST /devices HTTP/1.1\r\n".as_bytes());
+        wifi::tcp_send("Host: install.fireflyzero.com\r\n".as_bytes());
+        wifi::tcp_send("X-F0-Protocol: 1\r\n".as_bytes());
+        wifi::tcp_send(alloc::format!("X-Session-Id: {session_id}\r\n\r\n").as_bytes());
+
         session_id.insert(4, ' ');
         state.session_id = session_id;
         return;
@@ -156,7 +161,7 @@ fn update_wifi(state: &mut State) {
 fn save_creds(ssid: &str, pass: &str) {
     let mut buf: Vec<u8> = Vec::new();
     buf.extend(ssid.as_bytes());
-    buf.push(10); // 10 is '\n'.
+    buf.push(b'\n');
     buf.extend(pass.as_bytes());
     dump_file("creds", &buf);
 }

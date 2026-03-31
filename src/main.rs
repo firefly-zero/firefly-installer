@@ -3,6 +3,7 @@
 extern crate alloc;
 
 mod bindings;
+mod headers;
 mod installer;
 mod scene_connection;
 mod scene_password;
@@ -12,6 +13,7 @@ mod wifi;
 
 use firefly_rust::*;
 use firefly_ui::{Input, InputManager};
+use headers::*;
 use installer::*;
 use state::*;
 
