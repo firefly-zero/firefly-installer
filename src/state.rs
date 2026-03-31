@@ -130,22 +130,14 @@ fn load_creds() -> Option<(String, String)> {
     let raw = raw.as_bytes();
     let raw = raw.trim_ascii();
     let raw = alloc::str::from_utf8(raw).ok()?;
-    let (ssid, pass) = split_by(raw, '\n')?;
+    let (ssid, pass) = split_by(raw, b'\n')?;
     let creds = (String::from(ssid), String::from(pass));
     Some(creds)
 }
 
 /// Split the string once at the given character.
-fn split_by(input: &str, sep: char) -> Option<(&str, &str)> {
-    let mut split_at = None;
-    let sep: u8 = sep.try_into().unwrap();
-    for (i, ch) in input.bytes().enumerate() {
-        if ch == sep {
-            split_at = Some(i);
-            break;
-        }
-    }
-    let split_at = split_at?;
+fn split_by(input: &str, sep: u8) -> Option<(&str, &str)> {
+    let split_at = input.bytes().position(|ch| ch == sep)?;
     let (left, right) = input.split_at(split_at);
     Some((left, &right[1..]))
 }
