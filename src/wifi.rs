@@ -107,7 +107,7 @@ pub fn connect(ssid: &str, pass: &str) {
 pub fn status() -> Status {
     let status = unsafe { bindings::status() };
     match status {
-        0 => Status::Error,
+        1 => Status::Error,
         2 => Status::Disconnected,
         3 => Status::Initializing,
         4 => Status::Connected,
