@@ -61,10 +61,9 @@ pub fn update(state: &mut State) {
         let session_id = load_session_id();
         let mut session_id = alloc::format!("{session_id:08}");
 
-        wifi::tcp_send("POST /devices HTTP/1.1\r\n".as_bytes());
-        wifi::tcp_send("Host: install.fireflyzero.com\r\n".as_bytes());
-        wifi::tcp_send("X-F0-Protocol: 1\r\n".as_bytes());
-        wifi::tcp_send(alloc::format!("X-Session-Id: {session_id}\r\n\r\n").as_bytes());
+        let header = alloc::format!("GET /download/{session_id} HTTP/1.1\r\n");
+        wifi::tcp_send(header.as_bytes());
+        wifi::tcp_send("Host: install.fireflyzero.com\r\n\r\n".as_bytes());
 
         session_id.insert(4, ' ');
         state.session_id = session_id;
@@ -225,14 +224,22 @@ fn update_rom(state: &mut State) {
         RomState::NoResponse => {
             let chunk = wifi::tcp_recv_buf();
             if !chunk.is_empty() {
-                state.installer.update(&chunk);
+                let res = state.installer.update(&chunk);
+                if let Err(err) = res {
+                    state.rom_state = RomState::Failed(err);
+                    return;
+                }
                 state.rom_state = RomState::Downloading;
             }
         }
         RomState::Downloading => {
             for _ in 0..20 {
                 let chunk = wifi::tcp_recv_buf();
-                state.installer.update(&chunk);
+                let res = state.installer.update(&chunk);
+                if let Err(err) = res {
+                    state.rom_state = RomState::Failed(err);
+                    return;
+                }
                 if state.installer.done() {
                     let res = state.installer.finalize();
                     state.rom_state = if let Err(err) = res {

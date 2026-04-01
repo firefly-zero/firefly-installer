@@ -48,7 +48,7 @@ impl Installer {
     }
 
     /// Add the chunk to the buffer and parse the parts of the buffer that can be parsed.
-    pub fn update(&mut self, chunk: &[u8]) {
+    pub fn update(&mut self, chunk: &[u8]) -> Result<(), &'static str> {
         self.buf.extend(chunk);
         loop {
             if self.headers.is_none() {
@@ -58,8 +58,7 @@ impl Installer {
                 };
                 let rest = self.buf.split_off(idx);
                 let headers = self.buf.make_contiguous();
-                // TODO: propagate error.
-                let headers = RespHeaders::parse(headers).unwrap();
+                let headers = RespHeaders::parse(headers)?;
                 create_rom_dir(&headers.author_id, &headers.app_id);
                 self.headers = Some(headers);
                 self.buf = rest;
@@ -110,6 +109,7 @@ impl Installer {
                 }
             }
         }
+        Ok(())
     }
 
     pub fn finalize(&mut self) -> Result<(), &'static str> {

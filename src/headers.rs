@@ -31,10 +31,12 @@ impl RespHeaders {
             let Some(idx) = line.iter().position(|&c| c == b':') else {
                 return Err("invalid header received");
             };
+
             let (key, value) = line.split_at(idx);
             let key = key.trim_ascii();
             let key = key.to_ascii_lowercase();
             let key = unsafe { str::from_utf8_unchecked(&key) };
+            let value = &value[1..];
             let Ok(value) = str::from_utf8(value.trim_ascii()) else {
                 return Err("invalid header encoding");
             };
@@ -46,10 +48,15 @@ impl RespHeaders {
                     }
                     res.protocol = 1;
                 }
-                "author-id" => res.author_id = String::from(value),
-                "app-id" => res.app_id = String::from(value),
+                "author" => res.author_id = String::from(value),
+                "app" => res.app_id = String::from(value),
                 "today" => res.today = parse_date(value)?,
-                "expected-size" => {}
+                "size" => {
+                    let Ok(size) = value.parse::<u32>() else {
+                        return Err("invalid size");
+                    };
+                    res.expected_size = size;
+                }
                 _ => return Err("unsupported header received"),
             }
         }
