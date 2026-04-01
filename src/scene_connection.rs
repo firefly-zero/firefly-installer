@@ -214,8 +214,9 @@ fn load_addr() -> SocketAddrV4 {
         }
     }
 
-    let ip = Ipv4Addr::new(192, 168, 2, 6);
-    let port = 19743;
+    // let ip = Ipv4Addr::new(192, 168, 2, 6);
+    let ip = Ipv4Addr::new(127, 0, 0, 1);
+    let port = 19742;
     SocketAddrV4::new(ip, port)
 }
 

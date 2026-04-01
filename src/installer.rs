@@ -56,12 +56,11 @@ impl Installer {
                 let Some(idx) = find_subslice(data, b"\r\n\r\n") else {
                     break;
                 };
-                let rest = self.buf.split_off(idx);
-                let headers = self.buf.make_contiguous();
-                let headers = RespHeaders::parse(headers)?;
+                let size = idx as u32 + 4;
+                let headers = self.pop_bytes(size).unwrap();
+                let headers = RespHeaders::parse(&headers)?;
                 create_rom_dir(&headers.author_id, &headers.app_id);
                 self.headers = Some(headers);
-                self.buf = rest;
             }
 
             match &self.file {
