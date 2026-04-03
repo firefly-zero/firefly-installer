@@ -9,60 +9,9 @@ use firefly_rust::*;
 use crate::*;
 
 pub fn update(state: &mut State) {
-    match state.input.get() {
-        Input::Back => {
-            // If wifi connection in progress or failed,
-            // go back to the password input.
-            if state.wifi_state != WifiState::Connected {
-                if state.wifi_state != WifiState::Failed {
-                    wifi::disconnect();
-                }
-                state.wifi_state = WifiState::NotConnected;
-                state.transition(Scene::Password);
-                return;
-            }
-            // If there is no file download in progress
-            // (either already downloaded or no file was sent),
-            // going back just exits the app.
-            if state.rom_state != RomState::Downloading {
-                quit();
-                return;
-            }
-        }
-        Input::Select => {
-            let done = state.rom_state == RomState::Done;
-            if done {
-                match state.cursor {
-                    0 => restart(),
-                    1 => {
-                        let (author_id, app_id) = state.installer.get_id();
-                        sudo::run_app(author_id, app_id);
-                    }
-                    2 => quit(),
-                    _ => {}
-                }
-                return;
-            }
-            if state.wifi_state == WifiState::Failed {
-                state.wifi_wait = 0;
-                wifi::connect(&state.ssid, &state.password.text);
-                state.wifi_state = WifiState::Connecting;
-                return;
-            }
-        }
-        Input::Up => {
-            if state.cursor > 0 {
-                state.cursor -= 1;
-            }
-        }
-        Input::Down => {
-            if state.cursor < 2 {
-                state.cursor += 1;
-            }
-        }
-        Input::Left => state.cursor = 0,
-        Input::Right => state.cursor = 2,
-        Input::None => {}
+    let state_changed = handle_input(state);
+    if state_changed {
+        return;
     }
 
     // If an app is already installed, there is nothing else to do.
@@ -93,6 +42,65 @@ pub fn update(state: &mut State) {
     }
 
     update_rom(state);
+}
+
+fn handle_input(state: &mut State) -> bool {
+    match state.input.get() {
+        Input::Back => {
+            // If wifi connection in progress or failed,
+            // go back to the password input.
+            if state.wifi_state != WifiState::Connected {
+                if state.wifi_state != WifiState::Failed {
+                    wifi::disconnect();
+                }
+                state.wifi_state = WifiState::NotConnected;
+                state.transition(Scene::Password);
+                return true;
+            }
+            // If there is no file download in progress
+            // (either already downloaded or no file was sent),
+            // going back just exits the app.
+            if state.rom_state != RomState::Downloading {
+                quit();
+                return true;
+            }
+        }
+        Input::Select => {
+            let done = state.rom_state == RomState::Done;
+            if done {
+                match state.cursor {
+                    0 => restart(),
+                    1 => {
+                        let (author_id, app_id) = state.installer.get_id();
+                        sudo::run_app(author_id, app_id);
+                    }
+                    2 => quit(),
+                    _ => {}
+                }
+                return true;
+            }
+            if state.wifi_state == WifiState::Failed {
+                state.wifi_wait = 0;
+                wifi::connect(&state.ssid, &state.password.text);
+                state.wifi_state = WifiState::Connecting;
+                return true;
+            }
+        }
+        Input::Up => {
+            if state.cursor > 0 {
+                state.cursor -= 1;
+            }
+        }
+        Input::Down => {
+            if state.cursor < 2 {
+                state.cursor += 1;
+            }
+        }
+        Input::Left => state.cursor = 0,
+        Input::Right => state.cursor = 2,
+        Input::None => {}
+    }
+    false
 }
 
 /// Load previously created session ID.
