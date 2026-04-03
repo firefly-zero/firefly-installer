@@ -128,9 +128,10 @@ pub fn load_state() {
 fn load_creds() -> Option<(String, String)> {
     let raw = load_file_buf("creds")?;
     let raw = raw.as_bytes();
-    let raw = raw.trim_ascii();
     let raw = alloc::str::from_utf8(raw).ok()?;
     let (ssid, pass) = split_by(raw, b'\n')?;
+    let ssid = ssid.trim_ascii();
+    let pass = pass.trim_ascii();
     let creds = (String::from(ssid), String::from(pass));
     Some(creds)
 }
