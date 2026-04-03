@@ -214,10 +214,8 @@ fn load_addr() -> SocketAddrV4 {
         }
     }
 
-    // let ip = Ipv4Addr::new(192, 168, 2, 6);
-    let ip = Ipv4Addr::new(127, 0, 0, 1);
-    let port = 19742;
-    SocketAddrV4::new(ip, port)
+    let ip = Ipv4Addr::new(116, 203, 135, 82); // install.fireflyzero.com
+    SocketAddrV4::new(ip, 80)
 }
 
 fn update_rom(state: &mut State) {
