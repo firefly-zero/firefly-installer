@@ -132,6 +132,9 @@ fn load_creds() -> Option<(String, String)> {
     let (ssid, pass) = split_by(raw, b'\n')?;
     let ssid = ssid.trim_ascii();
     let pass = pass.trim_ascii();
+    if ssid.is_empty() {
+        return None;
+    }
     let creds = (String::from(ssid), String::from(pass));
     Some(creds)
 }
