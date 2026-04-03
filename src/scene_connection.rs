@@ -30,17 +30,39 @@ pub fn update(state: &mut State) {
             }
         }
         Input::Select => {
-            if state.wifi_state != WifiState::Failed {
+            let done = state.rom_state == RomState::Done;
+            if done {
+                match state.cursor {
+                    0 => restart(),
+                    1 => {
+                        let (author_id, app_id) = state.installer.get_id();
+                        sudo::run_app(author_id, app_id);
+                    }
+                    2 => quit(),
+                    _ => {}
+                }
+                return;
+            }
+            if state.wifi_state == WifiState::Failed {
                 state.wifi_wait = 0;
                 wifi::connect(&state.ssid, &state.password.text);
                 state.wifi_state = WifiState::Connecting;
-            }
-            if state.rom_state == RomState::Done {
-                quit();
                 return;
             }
         }
-        _ => {}
+        Input::Up => {
+            if state.cursor > 0 {
+                state.cursor -= 1;
+            }
+        }
+        Input::Down => {
+            if state.cursor < 2 {
+                state.cursor += 1;
+            }
+        }
+        Input::Left => state.cursor = 0,
+        Input::Right => state.cursor = 2,
+        Input::None => {}
     }
 
     // If an app is already installed, there is nothing else to do.
@@ -259,6 +281,11 @@ fn update_rom(state: &mut State) {
 }
 
 pub fn render(state: &mut State) {
+    draw_messages(state);
+    draw_buttons(state);
+}
+
+fn draw_messages(state: &mut State) {
     let font = state.font.as_font();
     let theme = state.settings.theme;
     let color = theme.primary;
@@ -304,7 +331,49 @@ pub fn render(state: &mut State) {
     draw_text_line(5, rom_msg, &font, color);
 }
 
+fn draw_buttons(state: &mut State) {
+    let done = state.rom_state == RomState::Done;
+    if !done {
+        return;
+    }
+
+    let font = state.font.as_font();
+    let theme = state.settings.theme;
+    let color = theme.primary;
+
+    let pressed = state.input.pressed();
+    firefly_ui::draw_cursor(6 + state.cursor as u32, theme, &font, pressed, 0);
+
+    draw_line(
+        Point::new(12, 93),
+        Point::new(227, 93),
+        LineStyle::new(theme.primary, 1),
+    );
+
+    {
+        let pressed = pressed && state.cursor == 0;
+        draw_button_text(7, "install another app", &font, color, pressed);
+    }
+    {
+        let pressed = pressed && state.cursor == 1;
+        draw_button_text(8, "launch installed app", &font, color, pressed);
+    }
+    {
+        let pressed = pressed && state.cursor == 2;
+        draw_button_text(9, "exit", &font, color, pressed);
+    }
+}
+
 fn draw_text_line(i: i32, text: &str, font: &Font, color: Color) {
     let point = Point::new(20, 12 + 13 * i);
+    draw_text(text, font, point, color);
+}
+
+fn draw_button_text(i: i32, text: &str, font: &Font, color: Color, pressed: bool) {
+    let mut point = Point::new(20, 12 + 13 * i);
+    if pressed {
+        point.x += 1;
+        point.y += 1;
+    }
     draw_text(text, font, point, color);
 }

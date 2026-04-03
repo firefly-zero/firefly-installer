@@ -47,6 +47,11 @@ impl Installer {
         }
     }
 
+    pub fn get_id(&self) -> (&str, &str) {
+        let headers = self.headers.as_ref().unwrap();
+        (&headers.author_id, &headers.app_id)
+    }
+
     /// Add the chunk to the buffer and parse the parts of the buffer that can be parsed.
     pub fn update(&mut self, chunk: &[u8]) -> Result<(), &'static str> {
         self.buf.extend(chunk);
