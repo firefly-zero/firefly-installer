@@ -18,14 +18,10 @@ pub fn update(state: &mut State) {
     }
     match state.input.get() {
         Input::Up => {
-            if state.cursor > 0 {
-                state.cursor -= 1;
-            }
+            state.cursor = state.cursor.saturating_sub(1);
         }
-        Input::Down => {
-            if state.cursor < state.points.len() - 1 {
-                state.cursor += 1;
-            }
+        Input::Down if state.cursor < state.points.len() - 1 => {
+            state.cursor += 1;
         }
         Input::Select => {
             state.ssid = state.points[state.cursor].clone();
