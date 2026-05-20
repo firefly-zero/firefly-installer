@@ -32,9 +32,10 @@ pub fn update(state: &mut State) {
         let session_id = load_session_id();
         let mut session_id = alloc::format!("{session_id:08}");
 
-        let header = alloc::format!("GET /download/{session_id} HTTP/1.1\r\n");
+        let header = alloc::format!(
+            "GET /download/{session_id} HTTP/1.1\r\nHost: install.fireflyzero.com\r\n\r\n"
+        );
         wifi::tcp_send(header.as_bytes());
-        wifi::tcp_send("Host: install.fireflyzero.com\r\n\r\n".as_bytes());
 
         session_id.insert(4, ' ');
         state.session_id = session_id;

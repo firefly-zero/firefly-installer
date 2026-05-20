@@ -14,6 +14,13 @@ pub struct RespHeaders {
 
 impl RespHeaders {
     pub fn parse(raw: &[u8]) -> Result<Self, &'static str> {
+        if raw.len() < 20 {
+            return Err("response contains no headers");
+        }
+        if !raw.starts_with(b"HTTP/1.1 200") {
+            return Err("unexpected status code");
+        }
+
         let mut res = Self {
             protocol: 0,
             author_id: String::new(),
@@ -21,7 +28,6 @@ impl RespHeaders {
             today: (0, 0, 0),
             expected_size: 0,
         };
-        // TODO: validate status code.
         for line in raw.split(|c| *c == b'\n') {
             // Parse the HTTP header.
             let line = line.trim_ascii();
