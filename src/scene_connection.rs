@@ -216,11 +216,13 @@ fn update_tcp(state: &mut State) {
             };
         }
         TcpState::Connected => {
-            // let status = wifi::tcp_status();
-            // if status != wifi::TcpStatus::Established {
-            //     state.tcp_state = TcpState::Failed;
-            //     // TODO: reset ROM download state.
-            // }
+            let status = wifi::tcp_status();
+            if status == wifi::TcpStatus::Error {
+                state.tcp_state = TcpState::Failed;
+                if state.rom_state == RomState::NoResponse {
+                    state.session_id.clear();
+                }
+            }
         }
         TcpState::Failed => {}
     }
