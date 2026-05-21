@@ -24,6 +24,7 @@ pub struct Installer {
     file: FileStatus,
     buf: VecDeque<u8>,
     hasher: Sha256,
+    pub has_manual: bool,
 }
 
 impl Installer {
@@ -34,6 +35,7 @@ impl Installer {
             file: FileStatus::Waiting,
             buf: VecDeque::new(),
             hasher: Sha256::new(),
+            has_manual: false,
         }
     }
 
@@ -88,6 +90,9 @@ impl Installer {
                     };
                     if size as usize > self.buf.len() {
                         self.buf.reserve(size as usize - self.buf.len());
+                    }
+                    if name == "_manual" {
+                        self.has_manual = true;
                     }
                     self.file = FileStatus::BodySize(name, size);
                 }

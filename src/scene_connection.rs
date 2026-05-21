@@ -73,7 +73,13 @@ fn handle_input(state: &mut State) -> bool {
                     0 => restart(),
                     1 => {
                         let (author_id, app_id) = state.installer.get_id();
-                        sudo::run_app(author_id, app_id);
+                        if state.installer.has_manual {
+                            let target = alloc::format!("{author_id}.{app_id}");
+                            sudo::dump_file("data/sys/manuals/etc/target", target.as_bytes());
+                            sudo::run_app("sys", "manuals");
+                        } else {
+                            sudo::run_app(author_id, app_id);
+                        }
                     }
                     2 => quit(),
                     _ => {}
@@ -367,7 +373,12 @@ fn draw_buttons(state: &mut State) {
     }
     {
         let pressed = pressed && state.cursor == 1;
-        draw_button_text(8, "launch installed app", &font, color, pressed);
+        let msg = if state.installer.has_manual {
+            "read app manual"
+        } else {
+            "launch installed app"
+        };
+        draw_button_text(8, msg, &font, color, pressed);
     }
     {
         let pressed = pressed && state.cursor == 2;
