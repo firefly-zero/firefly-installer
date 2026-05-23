@@ -19,19 +19,19 @@ pub fn update(state: &mut State) {
 }
 
 pub fn render(state: &mut State) {
-    let font = state.font.as_font();
+    let font = &state.font;
     let theme = state.settings.theme;
 
     let text = "enter the password:";
     let point = Point::new(20, 25);
-    draw_text(text, &font, point, theme.primary);
+    draw_text(text, font, point, theme.primary);
 
-    firefly_ui::draw_cursor(1, theme, &font, false, 0);
+    firefly_ui::draw_cursor(1, theme, font, false, 0);
 
     let text = state.password.text.as_str();
     if state.show_password != 0 {
         let point = Point::new(20, 38);
-        draw_text(text, &font, point, theme.accent);
+        draw_text(text, font, point, theme.accent);
     } else {
         for i in 0..text.len() {
             draw_circle(
@@ -53,5 +53,5 @@ pub fn render(state: &mut State) {
         );
     }
 
-    state.password.render(&font);
+    state.password.render(font);
 }

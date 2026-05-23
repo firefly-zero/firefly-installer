@@ -2,6 +2,7 @@ use alloc::str;
 use alloc::string::String;
 use alloc::vec::Vec;
 use alloc::{boxed::Box, collections::VecDeque};
+use firefly_sudo::sudo;
 use firefly_types::{BadgeProgress, BoardScores, Encode, FriendScore, Stats};
 use sha2::{Digest, Sha256};
 
@@ -134,9 +135,10 @@ impl Installer {
             let Some(exp_hash) = sudo::load_file_buf(&hash_path) else {
                 return Err("failed to read ROM hash");
             };
+            let exp_hash = &exp_hash.into_bytes()[..];
             let act_hash = self.hasher.finalize_reset();
             let act_hash: &[u8] = &act_hash;
-            if act_hash != exp_hash.as_bytes() {
+            if act_hash != exp_hash {
                 return Err("ROM is corrupted (hashsum mismatch)");
             }
         }
@@ -227,8 +229,8 @@ fn write_stats(
     let Some(raw) = sudo::load_file_buf(&default_path) else {
         return Err("cannot access achievements info from the app");
     };
-    let raw = raw.as_bytes();
-    let Ok(default) = Stats::decode(raw) else {
+    let raw = raw.into_bytes();
+    let Ok(default) = Stats::decode(&raw) else {
         return Err("failed to parse the app achievements info");
     };
     let stats_path = alloc::format!("{data_path}/stats");
@@ -287,7 +289,7 @@ fn update_stats(
     let Some(raw) = sudo::load_file_buf(stats_path) else {
         return Err("failed to read app stats");
     };
-    let Ok(old_stats) = Stats::decode(raw.as_bytes()) else {
+    let Ok(old_stats) = Stats::decode(&raw.into_bytes()) else {
         return Err("failed to parse app stats");
     };
 

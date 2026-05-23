@@ -68,20 +68,29 @@ checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
 
 [[package]]
 name = "firefly-keyboard"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7a17570a9421628cb08ee7b07abc16be4db4f5ab19ccbfb1c38e548b3a7f55b"
+checksum = "789e929406c540ad991f122a44fc922c51eeb5576737bf684b705b745c87a674"
 dependencies = [
  "firefly-rust",
 ]
 
 [[package]]
 name = "firefly-rust"
-version = "0.13.2"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c99a781c0a6e84cdf93cc10c8633fb6d1b064a56ff145326aa1ec97796b696a4"
+checksum = "56338bf159fd7795f99bcb52191a753684c47761552eb11eaa69ec578507b6e3"
 dependencies = [
  "talc",
+]
+
+[[package]]
+name = "firefly-sudo"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83d96b899b36977dd05e3b55ade6bceab0f1c51112623328ecea0d6b805d3b7c"
+dependencies = [
+ "firefly-rust",
 ]
 
 [[package]]
@@ -96,9 +105,9 @@ dependencies = [
 
 [[package]]
 name = "firefly-ui"
-version = "0.2.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bc6512e184e79fa4201e7253b5eea55d142362b71bdd65f67186c07fdb83610"
+checksum = "478d552504a25664736da091e9dbc0a1b0fa561569099a3f1ae16f8ab216772b"
 dependencies = [
  "firefly-rust",
 ]
@@ -118,6 +127,7 @@ version = "0.1.1"
 dependencies = [
  "firefly-keyboard",
  "firefly-rust",
+ "firefly-sudo",
  "firefly-types",
  "firefly-ui",
  "sha2",

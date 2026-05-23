@@ -95,7 +95,7 @@ fn ascii_gt(s1: &str, s2: &str) -> bool {
 
 pub fn render(state: &mut State) {
     state.rendered_message = true;
-    let font = state.font.as_font();
+    let font = &state.font;
     let theme = state.settings.theme;
     let text_color = theme.primary;
 
@@ -106,13 +106,13 @@ pub fn render(state: &mut State) {
             "No access points found"
         };
         let point = Point::new(20, 25);
-        draw_text(text, &font, point, text_color);
+        draw_text(text, font, point, text_color);
         return;
     }
 
-    firefly_ui::draw_cursor(state.cursor as u32, theme, &font, state.input.pressed(), 0);
+    firefly_ui::draw_cursor(state.cursor as u32, theme, font, state.input.pressed(), 0);
     for (ssid, i) in state.points.iter().zip(1..) {
         let point = Point::new(20, 12 + 13 * i);
-        draw_text(ssid, &font, point, text_color);
+        draw_text(ssid, font, point, text_color);
     }
 }

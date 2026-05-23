@@ -40,7 +40,7 @@ pub enum RomState {
 }
 
 pub struct State {
-    pub font: FileBuf,
+    pub font: FontBuf,
     pub settings: Settings,
     pub points: Vec<String>,
     pub rendered_message: bool,
@@ -95,7 +95,7 @@ pub fn load_state() {
     }
 
     let state = State {
-        font,
+        font: font.into(),
         settings: get_settings(get_me()),
         points: Vec::new(),
         rendered_message: false,
@@ -127,8 +127,8 @@ pub fn load_state() {
 /// Only the latest password for the latest used AP is stored.
 fn load_creds() -> Option<(String, String)> {
     let raw = load_file_buf("creds")?;
-    let raw = raw.as_bytes();
-    let raw = alloc::str::from_utf8(raw).ok()?;
+    let raw = raw.into_bytes();
+    let raw = alloc::str::from_utf8(&raw).ok()?;
     let (ssid, pass) = split_by(raw, b'\n')?;
     let ssid = ssid.trim_ascii();
     let pass = pass.trim_ascii();

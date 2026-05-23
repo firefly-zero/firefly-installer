@@ -5,9 +5,10 @@ rust-version = "1.95.0"
 edition = "2024"
 
 [dependencies]
-firefly-keyboard = "0.1.2"
-firefly-rust = { version = "0.13.2", features = ["alloc", "talc", "sudo"] }
-firefly-ui = "0.2.0"
+firefly-keyboard = "0.1.3"
+firefly-rust = { version = "0.14.0", features = ["talc"] }
+firefly-sudo = { version = "0.14.0", features = ["alloc"] }
+firefly-ui = "0.3.1"
 firefly-types = "0.10.0"
 # Updating sha2 to 0.11.0 adds 4kb to the binary size.
 # The changelog doesn't provide a good explanation on why it might be.
