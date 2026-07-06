@@ -13,7 +13,7 @@ firefly-types = "0.11.0"
 # Updating sha2 to 0.11.0 adds 4kb to the binary size.
 # The changelog doesn't provide a good explanation on why it might be.
 # So, why update? If it works, it works.
-sha2 = { version = "0.11.0", default-features = false }
+sha2 = { version = "0.10.9", default-features = false }
 
 # https://github.com/johnthagen/min-sized-rust
 [profile.release]
