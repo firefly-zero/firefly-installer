@@ -31,8 +31,8 @@ enum FileStatus {
 }
 
 pub struct Installer {
-    headers: Option<RespHeaders>,
-    received_size: u32,
+    pub headers: Option<RespHeaders>,
+    pub received_size: u32,
     file: FileStatus,
     buf: VecDeque<u8>,
     hasher: Sha256,
