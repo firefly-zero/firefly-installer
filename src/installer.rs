@@ -1,5 +1,5 @@
 use alloc::str;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use alloc::{boxed::Box, collections::VecDeque};
 use firefly_sudo::sudo;
@@ -7,6 +7,10 @@ use firefly_types::{BadgeProgress, BoardScores, Encode, FriendScore, Stats};
 use sha2::{Digest, Sha256};
 
 use crate::*;
+
+const KB: u32 = 1024;
+/// Keep partially downloaded file in RAM until it reaches at least that many bytes.
+const FLUSH_EVERY: u32 = 64 * KB;
 
 enum FileStatus {
     /// Less than 4 bytes received, cannot get file name length.
@@ -16,7 +20,14 @@ enum FileStatus {
     /// Received file name, waiting for the file size.
     Name(String),
     /// Got file size, waiting for the file body to arrive.
-    BodySize(String, u32),
+    BodySize {
+        name: String,
+        /// The total file size.
+        size: u32,
+        /// How much is yet to be dumped on the disk.
+        /// Includes both buffered and not-yet-downloaded bytes.
+        left: u32,
+    },
 }
 
 pub struct Installer {
@@ -82,6 +93,11 @@ impl Installer {
                     let Some(name) = self.pop_string(*size) else {
                         break;
                     };
+                    if name != "_hash" {
+                        self.hasher.update("\x00");
+                        self.hasher.update(name.as_bytes());
+                        self.hasher.update("\x00");
+                    }
                     self.file = FileStatus::Name(name);
                 }
                 FileStatus::Name(name) => {
@@ -89,33 +105,50 @@ impl Installer {
                     let Some(size) = self.pop_u32() else {
                         break;
                     };
-                    if size as usize > self.buf.len() {
-                        self.buf.reserve(size as usize - self.buf.len());
+                    let required_buf = u32::min(size, FLUSH_EVERY + 200) as usize;
+                    if required_buf > self.buf.len() {
+                        self.buf.reserve(required_buf - self.buf.len());
                     }
                     if name == "_manual" {
                         self.has_manual = true;
                     }
-                    self.file = FileStatus::BodySize(name, size);
+                    self.file = FileStatus::BodySize {
+                        name,
+                        size,
+                        left: size,
+                    };
                 }
-                FileStatus::BodySize(_, size) => {
-                    let Some(content) = self.pop_bytes(*size) else {
+                FileStatus::BodySize { left, .. } => {
+                    let chunk_size = (*left).min(FLUSH_EVERY);
+                    let Some(content) = self.pop_bytes(chunk_size) else {
                         break;
                     };
-                    let FileStatus::BodySize(name, size) = &self.file else {
+                    let FileStatus::BodySize { name, size, left } = &self.file else {
                         unreachable!()
                     };
                     if name != "_hash" {
-                        self.hasher.update("\x00");
-                        self.hasher.update(name.as_bytes());
-                        self.hasher.update("\x00");
                         self.hasher.update(&content);
                     }
-                    self.received_size += size;
-                    let headers = self.headers.as_ref().unwrap();
-                    let path =
-                        alloc::format!("roms/{}/{}/{name}", headers.author_id, headers.app_id);
-                    sudo::dump_file(&path, &content);
-                    self.file = FileStatus::Waiting;
+                    self.received_size += chunk_size;
+
+                    let h = self.headers.as_ref().unwrap();
+                    let path = alloc::format!("roms/{}/{}/{name}", h.author_id, h.app_id);
+                    if *left == *size {
+                        sudo::dump_file(&path, &content);
+                    } else {
+                        sudo::append_file(&path, &content);
+                    }
+
+                    let left = left - chunk_size;
+                    if left == 0 {
+                        self.file = FileStatus::Waiting;
+                    } else {
+                        self.file = FileStatus::BodySize {
+                            name: name.to_string(),
+                            size: *size,
+                            left,
+                        };
+                    }
                 }
             }
         }
