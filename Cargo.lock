@@ -87,9 +87,9 @@ dependencies = [
 
 [[package]]
 name = "firefly-sudo"
-version = "0.14.2"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a175b066ecff9d21025c15dc531a793affebc816c13ad4854fa5dc871053ba0c"
+checksum = "d49ef593caac1bd7bb29efeb0b35ce42ef7d4e8081b9d505dcb654577d54ff88"
 dependencies = [
  "firefly-rust",
 ]

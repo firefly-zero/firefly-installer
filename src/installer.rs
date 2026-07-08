@@ -3,7 +3,7 @@ use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use alloc::{boxed::Box, collections::VecDeque};
 use firefly_sudo::sudo;
-use firefly_types::{BadgeProgress, BoardScores, Encode, FriendScore, Stats};
+use firefly_types::{BadgeProgress, BoardScores, DeviceInfo, Encode, FriendScore, Stats};
 use sha2::{Digest, Sha256};
 
 use crate::*;
@@ -205,6 +205,17 @@ impl Installer {
             return Err("failed to reset launcher cache");
         }
 
+        // Is it firmware update? Run system update!
+        if author_id == "sys" && app_id == "updates" {
+            let fw_path = "roms/sys/updates/firmware";
+            let old_part = get_partition();
+            let new_part: u8 = if old_part == 1 { 2 } else { 1 };
+            let ok = sudo::write_partition(new_part, fw_path);
+            if ok {
+                sudo::switch_partition(new_part);
+            }
+        }
+
         // Unlike in firefly-cli, here we don't need
         // to write `/sys/new-app` or `sys/launcher`.
         // If the user launches "sys.installer",
@@ -393,4 +404,14 @@ fn create_rom_dir(author_id: &str, app_id: &str) {
         }
         sudo::create_dir(&rom_path);
     }
+}
+
+/// Get the currently active partition number.
+fn get_partition() -> u8 {
+    let Some(raw) = sudo::load_file_buf("sys/device") else {
+        return 0;
+    };
+    let raw = raw.into_bytes();
+    let device = DeviceInfo::decode(&raw).unwrap();
+    device.main_partition
 }
