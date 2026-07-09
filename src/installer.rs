@@ -31,9 +31,12 @@ enum FileStatus {
 }
 
 pub struct Installer {
-    pub headers: Option<RespHeaders>,
-    pub received_size: u32,
+    /// Parsed response HTTP headers.
+    headers: Option<RespHeaders>,
+    /// How many bytes are flushed on disk.
+    received_size: u32,
     file: FileStatus,
+    /// Downloaded but not yet flushed data.
     buf: VecDeque<u8>,
     hasher: Sha256,
     pub has_manual: bool,
@@ -49,6 +52,23 @@ impl Installer {
             hasher: Sha256::new(),
             has_manual: false,
         }
+    }
+
+    /// The ratio of downloaded to expected data.
+    pub fn downloaded(&self) -> f32 {
+        let Some(headers) = &self.headers else {
+            return 0.;
+        };
+        let n = self.received_size as f32 + self.buf.len() as f32;
+        n / headers.expected_size as f32
+    }
+
+    /// The ratio of written on disk to expected data.
+    pub fn flushed(&self) -> f32 {
+        let Some(headers) = &self.headers else {
+            return 0.;
+        };
+        self.received_size as f32 / headers.expected_size as f32
     }
 
     pub fn done(&self) -> bool {
