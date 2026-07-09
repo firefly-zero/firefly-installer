@@ -351,19 +351,19 @@ fn draw_messages(state: &mut State) {
     // Progress bar.
     if state.rom_state == RomState::Downloading {
         let point = Point::new(20, 12 + 13 * 6 - 6);
-        let style = Style::outlined(theme.accent, 1);
-        let width = 140;
-        draw_rect(point, Size::new(width, 6), style);
-
-        let style = Style::outlined(theme.accent, 1);
-        let ratio = state.installer.downloaded();
-        let width = (width as f32 * ratio) as i32;
-        draw_rect(point, Size::new(width, 6), style);
+        let style = Style::outlined(theme.primary, 1);
+        let full_width = 140;
+        draw_rect(point, Size::new(full_width, 6), style);
 
         let style = Style::solid(theme.accent);
         let ratio = state.installer.flushed();
-        let width = (width as f32 * ratio) as i32;
-        draw_rect(point, Size::new(width, 6), style);
+        let part_width = (full_width as f32 * ratio) as i32;
+        draw_rect(point, Size::new(part_width, 6), style);
+
+        let style = Style::outlined(theme.primary, 1);
+        let ratio = state.installer.downloaded();
+        let part_width = (full_width as f32 * ratio) as i32;
+        draw_rect(point, Size::new(part_width, 6), style);
     }
 }
 
