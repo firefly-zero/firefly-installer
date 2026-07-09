@@ -272,30 +272,45 @@ fn update_rom(state: &mut State) {
             }
         }
         RomState::Downloading => {
-            for _ in 0..20 {
-                let chunk = wifi::tcp_recv_buf();
-                let res = state.installer.update(&chunk);
-                if let Err(err) = res {
-                    state.rom_state = RomState::Failed(err);
-                    return;
-                }
-                if state.installer.done() {
-                    let res = state.installer.finalize();
-                    state.rom_state = if let Err(err) = res {
-                        RomState::Failed(err)
-                    } else {
-                        RomState::Done
-                    };
-                    break;
-                }
-                if chunk.is_empty() {
-                    break;
-                }
+            let chunk = download_chunk();
+            let res = state.installer.update(&chunk);
+            if let Err(err) = res {
+                state.rom_state = RomState::Failed(err);
+                return;
+            }
+            if state.installer.done() {
+                let res = state.installer.finalize();
+                state.rom_state = if let Err(err) = res {
+                    RomState::Failed(err)
+                } else {
+                    RomState::Done
+                };
             }
         }
         RomState::Done => {}
         RomState::Failed(_) => {}
     }
+}
+
+/// Fetch a chunk of response body.
+fn download_chunk() -> Vec<u8> {
+    const N_PULLS: usize = 40;
+    const PULL_SIZE: usize = 80;
+
+    let mut chunk = vec![0; N_PULLS * PULL_SIZE];
+    let mut chunk_size = 0;
+    for _ in 0..N_PULLS {
+        if chunk.is_empty() {
+            break;
+        }
+        let n = wifi::tcp_recv(&mut chunk[chunk_size..chunk_size + PULL_SIZE]);
+        chunk_size += n;
+        if n == 0 {
+            break;
+        }
+    }
+    chunk.truncate(chunk_size);
+    chunk
 }
 
 pub fn render(state: &mut State) {
