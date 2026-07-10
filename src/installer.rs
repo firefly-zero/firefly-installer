@@ -227,13 +227,7 @@ impl Installer {
 
         // Is it firmware update? Run system update!
         if author_id == "sys" && app_id == "updates" {
-            let fw_path = "roms/sys/updates/firmware";
-            let old_part = get_partition();
-            let new_part: u8 = if old_part == 1 { 2 } else { 1 };
-            let ok = sudo::write_partition(new_part, fw_path);
-            if ok {
-                sudo::switch_partition(new_part);
-            }
+            flash_partitions()
         }
 
         // Unlike in firefly-cli, here we don't need
@@ -273,6 +267,39 @@ impl Installer {
             res.push(self.buf.pop_front().unwrap());
         }
         Some(res)
+    }
+}
+
+fn flash_partitions() {
+    // Detect currently unused partitions.
+    let (main_part, io_part) = get_partitions();
+    let main_part: u8 = if main_part == 1 { 2 } else { 1 };
+    let io_part: u8 = if io_part == 1 { 12 } else { 11 };
+
+    // Flash partitions.
+    let main_path = "roms/sys/updates/fwmain";
+    let has_main = sudo::get_file_size(main_path) != 0;
+    if has_main {
+        let ok = sudo::write_partition(main_part, main_path);
+        if !ok {
+            return;
+        }
+    }
+    let io_path = "roms/sys/updates/fwio";
+    let has_io = sudo::get_file_size(io_path) != 0;
+    if has_io {
+        let ok = sudo::write_partition(io_part, io_path);
+        if !ok {
+            return;
+        }
+    }
+
+    // Switch to the flashed partitions.
+    if has_main {
+        sudo::switch_partition(main_part);
+    }
+    if has_io {
+        sudo::switch_partition(io_part);
     }
 }
 
@@ -427,11 +454,11 @@ fn create_rom_dir(author_id: &str, app_id: &str) {
 }
 
 /// Get the currently active partition number.
-fn get_partition() -> u8 {
+fn get_partitions() -> (u8, u8) {
     let Some(raw) = sudo::load_file_buf("sys/device") else {
-        return 0;
+        return (0, 0);
     };
     let raw = raw.into_bytes();
     let device = DeviceInfo::decode(&raw).unwrap();
-    device.main_partition
+    (device.main_partition, device.io_partition)
 }
