@@ -87,18 +87,18 @@ dependencies = [
 
 [[package]]
 name = "firefly-sudo"
-version = "0.14.3"
+version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d49ef593caac1bd7bb29efeb0b35ce42ef7d4e8081b9d505dcb654577d54ff88"
+checksum = "5ede7b3450c23bdc16b5d58e5e736e55601a52a658f4673bd8aa8006ebe37271"
 dependencies = [
  "firefly-rust",
 ]
 
 [[package]]
 name = "firefly-types"
-version = "0.11.0"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "404cfd65fc0c437c230d1fb23ad1eba84898ace7331a118f72ab3207b4c90490"
+checksum = "a27dd0cf9a1fbf3b6d7e26ec9d986ce7f2ba66bc71074485d3a0d578308da8b3"
 dependencies = [
  "postcard",
  "serde",

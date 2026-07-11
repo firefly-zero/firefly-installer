@@ -30,6 +30,27 @@ enum FileStatus {
     },
 }
 
+struct Partition {
+    id: u8,
+    offset: u32,
+    flashed: bool,
+}
+
+impl Partition {
+    fn new(old_id: u8) -> Self {
+        let id = if old_id == 1 { 2 } else { 1 };
+        Self {
+            id,
+            offset: match id {
+                0 => 0x20000,
+                1 => 0x220000,
+                _ => 0x420000,
+            },
+            flashed: false,
+        }
+    }
+}
+
 pub struct Installer {
     /// Parsed response HTTP headers.
     headers: Option<RespHeaders>,
@@ -40,10 +61,14 @@ pub struct Installer {
     buf: VecDeque<u8>,
     hasher: Sha256,
     pub has_manual: bool,
+
+    main_part: Partition,
+    io_part: Partition,
 }
 
 impl Installer {
     pub fn new() -> Self {
+        let (main_id, io_id) = get_partitions();
         Self {
             headers: None,
             received_size: 0,
@@ -51,6 +76,8 @@ impl Installer {
             buf: VecDeque::new(),
             hasher: Sha256::new(),
             has_manual: false,
+            main_part: Partition::new(main_id),
+            io_part: Partition::new(io_id),
         }
     }
 
@@ -138,12 +165,22 @@ impl Installer {
                         left: size,
                     };
                 }
-                FileStatus::BodySize { left, .. } => {
-                    let chunk_size = (*left).min(FLUSH_EVERY);
+                FileStatus::BodySize { left, size, name } => {
+                    let left = *left;
+                    let size = *size;
+                    let h = self.headers.as_ref().unwrap();
+                    let updates = h.author_id == "sys" && h.app_id == "updates";
+                    let chunk_size = if updates && name == "fwio" {
+                        80
+                    } else {
+                        FLUSH_EVERY
+                    };
+                    let chunk_size = left.min(chunk_size);
                     let Some(content) = self.pop_bytes(chunk_size) else {
                         break;
                     };
-                    let FileStatus::BodySize { name, size, left } = &self.file else {
+
+                    let FileStatus::BodySize { name, .. } = &self.file else {
                         unreachable!()
                     };
                     if name != "_hash" {
@@ -151,12 +188,35 @@ impl Installer {
                     }
                     self.received_size += chunk_size;
 
-                    let h = self.headers.as_ref().unwrap();
-                    let path = alloc::format!("roms/{}/{}/{name}", h.author_id, h.app_id);
-                    if *left == *size {
-                        sudo::dump_file(&path, &content);
+                    let first_chunk = left == size;
+                    let last_chunk = left == chunk_size;
+                    let written = size - left;
+                    if updates && name == "fwmain" {
+                        let addr = self.main_part.offset + written;
+                        let ok = sudo::write_main_flash(addr, &content);
+                        if !ok {
+                            return Err("failed to flash main partition");
+                        }
+                        if last_chunk {
+                            self.main_part.flashed = true;
+                        }
+                    } else if updates && name == "fwio" {
+                        let addr = self.io_part.offset + written;
+                        let ok = sudo::write_io_flash(addr, &content);
+                        if !ok {
+                            return Err("failed to flash IO partition");
+                        }
+                        if last_chunk {
+                            self.io_part.flashed = true;
+                        }
                     } else {
-                        sudo::append_file(&path, &content);
+                        let h = self.headers.as_ref().unwrap();
+                        let path = alloc::format!("roms/{}/{}/{name}", h.author_id, h.app_id);
+                        if first_chunk {
+                            sudo::dump_file(&path, &content);
+                        } else {
+                            sudo::append_file(&path, &content);
+                        }
                     }
 
                     let left = left - chunk_size;
@@ -165,7 +225,7 @@ impl Installer {
                     } else {
                         self.file = FileStatus::BodySize {
                             name: name.to_string(),
-                            size: *size,
+                            size,
                             left,
                         };
                     }
@@ -227,7 +287,12 @@ impl Installer {
 
         // Is it firmware update? Run system update!
         if author_id == "sys" && app_id == "updates" {
-            flash_partitions()
+            if self.main_part.flashed {
+                sudo::switch_main_partition(self.main_part.id);
+            }
+            if self.io_part.flashed {
+                sudo::switch_io_partition(self.io_part.id);
+            }
         }
 
         // Unlike in firefly-cli, here we don't need
@@ -267,39 +332,6 @@ impl Installer {
             res.push(self.buf.pop_front().unwrap());
         }
         Some(res)
-    }
-}
-
-fn flash_partitions() {
-    // Detect currently unused partitions.
-    let (main_part, io_part) = get_partitions();
-    let main_part: u8 = if main_part == 1 { 2 } else { 1 };
-    let io_part: u8 = if io_part == 1 { 12 } else { 11 };
-
-    // Flash partitions.
-    let main_path = "roms/sys/updates/fwmain";
-    let has_main = sudo::get_file_size(main_path) != 0;
-    if has_main {
-        let ok = sudo::write_partition(main_part, main_path);
-        if !ok {
-            return;
-        }
-    }
-    let io_path = "roms/sys/updates/fwio";
-    let has_io = sudo::get_file_size(io_path) != 0;
-    if has_io {
-        let ok = sudo::write_partition(io_part, io_path);
-        if !ok {
-            return;
-        }
-    }
-
-    // Switch to the flashed partitions.
-    if has_main {
-        sudo::switch_partition(main_part);
-    }
-    if has_io {
-        sudo::switch_partition(io_part);
     }
 }
 
