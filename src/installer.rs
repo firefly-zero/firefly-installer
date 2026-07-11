@@ -171,7 +171,7 @@ impl Installer {
                     let h = self.headers.as_ref().unwrap();
                     let updates = h.author_id == "sys" && h.app_id == "updates";
                     let chunk_size = if updates && name == "fwio" {
-                        80
+                        240
                     } else {
                         FLUSH_EVERY
                     };
@@ -179,59 +179,65 @@ impl Installer {
                     let Some(content) = self.pop_bytes(chunk_size) else {
                         break;
                     };
-
-                    let FileStatus::BodySize { name, .. } = &self.file else {
-                        unreachable!()
-                    };
-                    if name != "_hash" {
-                        self.hasher.update(&content);
-                    }
-                    self.received_size += chunk_size;
-
-                    let first_chunk = left == size;
-                    let last_chunk = left == chunk_size;
-                    let written = size - left;
-                    if updates && name == "fwmain" {
-                        let addr = self.main_part.offset + written;
-                        let ok = sudo::write_main_flash(addr, &content);
-                        if !ok {
-                            return Err("failed to flash main partition");
-                        }
-                        if last_chunk {
-                            self.main_part.flashed = true;
-                        }
-                    } else if updates && name == "fwio" {
-                        let addr = self.io_part.offset + written;
-                        let ok = sudo::write_io_flash(addr, &content);
-                        if !ok {
-                            return Err("failed to flash IO partition");
-                        }
-                        if last_chunk {
-                            self.io_part.flashed = true;
-                        }
-                    } else {
-                        let h = self.headers.as_ref().unwrap();
-                        let path = alloc::format!("roms/{}/{}/{name}", h.author_id, h.app_id);
-                        if first_chunk {
-                            sudo::dump_file(&path, &content);
-                        } else {
-                            sudo::append_file(&path, &content);
-                        }
-                    }
-
-                    let left = left - chunk_size;
-                    if left == 0 {
-                        self.file = FileStatus::Waiting;
-                    } else {
-                        self.file = FileStatus::BodySize {
-                            name: name.to_string(),
-                            size,
-                            left,
-                        };
-                    }
+                    self.write_file(left, size, &content)?;
                 }
             }
         }
+        Ok(())
+    }
+
+    fn write_file(&mut self, left: u32, size: u32, content: &[u8]) -> Result<(), &'static str> {
+        let chunk_size = content.len() as u32;
+        let FileStatus::BodySize { name, .. } = &self.file else {
+            unreachable!()
+        };
+        if name != "_hash" {
+            self.hasher.update(content);
+        }
+        self.received_size += chunk_size;
+
+        let first_chunk = left == size;
+        let last_chunk = left == chunk_size;
+        let written = size - left;
+        let h = self.headers.as_ref().unwrap();
+        let updates = h.author_id == "sys" && h.app_id == "updates";
+        if updates && name == "fwmain" {
+            let addr = self.main_part.offset + written;
+            let ok = sudo::write_main_flash(addr, content);
+            if !ok {
+                return Err("failed to flash main partition");
+            }
+            if last_chunk {
+                self.main_part.flashed = true;
+            }
+        } else if updates && name == "fwio" {
+            let addr = self.io_part.offset + written;
+            let ok = sudo::write_io_flash(addr, content);
+            if !ok {
+                return Err("failed to flash IO partition");
+            }
+            if last_chunk {
+                self.io_part.flashed = true;
+            }
+        } else {
+            let path = alloc::format!("roms/{}/{}/{name}", h.author_id, h.app_id);
+            if first_chunk {
+                sudo::dump_file(&path, content);
+            } else {
+                sudo::append_file(&path, content);
+            }
+        }
+
+        let left = left - chunk_size;
+        self.file = if left == 0 {
+            FileStatus::Waiting
+        } else {
+            FileStatus::BodySize {
+                name: name.to_string(),
+                size,
+                left,
+            }
+        };
         Ok(())
     }
 
