@@ -171,7 +171,7 @@ impl Installer {
                     let h = self.headers.as_ref().unwrap();
                     let updates = h.author_id == "sys" && h.app_id == "updates";
                     let chunk_size = if updates && name == "fwio" {
-                        240
+                        80
                     } else {
                         FLUSH_EVERY
                     };
@@ -291,7 +291,7 @@ impl Installer {
             return Err("failed to reset launcher cache");
         }
 
-        // Is it firmware update? Run system update!
+        // If new firmware is flashed, switch the partition.
         if author_id == "sys" && app_id == "updates" {
             if self.main_part.flashed {
                 sudo::switch_main_partition(self.main_part.id);
