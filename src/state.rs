@@ -1,3 +1,4 @@
+use crate::wifi::WifiStatus;
 use crate::*;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -12,15 +13,6 @@ pub enum Scene {
     Points,
     Password,
     Connection,
-}
-
-#[derive(PartialEq)]
-pub enum WifiState {
-    NotConnected,
-    Connecting,
-    ObtainingIP,
-    Connected,
-    Failed,
 }
 
 #[derive(PartialEq)]
@@ -55,7 +47,7 @@ pub struct State {
     pub show_password: u8,
     pub saved: Option<(String, String)>,
 
-    pub wifi_state: WifiState,
+    pub wifi_state: WifiStatus,
     pub wifi_wait: usize,
     pub tcp_state: TcpState,
     pub tcp_wait: usize,
@@ -109,7 +101,7 @@ pub fn load_state() {
         input: InputManager::new(),
         installer: Installer::new(),
 
-        wifi_state: WifiState::NotConnected,
+        wifi_state: WifiStatus::Stopped,
         wifi_wait: 0,
         tcp_state: TcpState::NotConnected,
         tcp_wait: 0,

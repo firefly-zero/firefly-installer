@@ -6,8 +6,9 @@ use core::{
 };
 use firefly_rust::*;
 use firefly_sudo::sudo;
+use firefly_types::wifi::DisconnectReason;
 
-use crate::*;
+use crate::{wifi::WifiStatus, *};
 
 pub fn update(state: &mut State) {
     let state_changed = handle_input(state);
@@ -21,7 +22,7 @@ pub fn update(state: &mut State) {
     }
 
     update_wifi(state);
-    if state.wifi_state != WifiState::Connected {
+    if state.wifi_state != WifiStatus::Connected {
         return;
     }
     update_tcp(state);
@@ -51,11 +52,11 @@ fn handle_input(state: &mut State) -> bool {
         Input::Back => {
             // If wifi connection in progress or failed,
             // go back to the password input.
-            if state.wifi_state != WifiState::Connected {
-                if state.wifi_state != WifiState::Failed {
+            if state.wifi_state != WifiStatus::Connected {
+                if state.wifi_state != WifiStatus::Stopped {
                     wifi::disconnect();
                 }
-                state.wifi_state = WifiState::NotConnected;
+                state.wifi_state = WifiStatus::Disconnected(DisconnectReason::Unspecified);
                 state.transition(Scene::Password);
                 return true;
             }
@@ -87,10 +88,8 @@ fn handle_input(state: &mut State) -> bool {
                 }
                 return true;
             }
-            if state.wifi_state == WifiState::Failed {
+            if matches!(state.wifi_state, WifiStatus::Disconnected(_)) {
                 state.wifi_wait = 0;
-                wifi::connect(&state.ssid, &state.password.text);
-                state.wifi_state = WifiState::Connecting;
                 return true;
             }
         }
@@ -150,46 +149,19 @@ fn load_session_id() -> u32 {
 }
 
 fn update_wifi(state: &mut State) {
-    state.wifi_wait = usize::min(state.wifi_wait + 1, 400);
-    match state.wifi_state {
-        WifiState::NotConnected => {
-            state.wifi_wait = 0;
-            wifi::connect(&state.ssid, &state.password.text);
-            state.wifi_state = WifiState::Connecting;
-        }
-        WifiState::Connecting | WifiState::ObtainingIP => {
-            let status = wifi::status();
-            if state.wifi_wait < 60 {
-                return;
-            }
-            state.wifi_state = match status {
-                wifi::Status::Error | wifi::Status::Other => WifiState::Failed,
-                wifi::Status::Disconnected => {
-                    if state.wifi_wait > 5 * 60 {
-                        WifiState::Failed
-                    } else {
-                        WifiState::Connecting
-                    }
-                }
-                wifi::Status::Initializing => WifiState::ObtainingIP,
-                wifi::Status::Connected => {
-                    save_creds(&state.ssid, &state.password.text);
-                    WifiState::Connected
-                }
-            };
-        }
-        WifiState::Connected => {
-            let status = wifi::status();
-            if status != wifi::Status::Connected {
-                state.wifi_state = WifiState::Failed;
-                if state.tcp_state != TcpState::NotConnected {
-                    wifi::tcp_close();
-                    state.tcp_state = TcpState::NotConnected;
-                }
-            }
-        }
-        WifiState::Failed => {}
+    if state.wifi_wait == 0 {
+        wifi::connect(&state.ssid, &state.password.text);
     }
+    state.wifi_wait = usize::min(state.wifi_wait + 1, 400);
+    let new_status = wifi::status();
+    if new_status != WifiStatus::Connected && state.tcp_state != TcpState::NotConnected {
+        wifi::tcp_close();
+        state.tcp_state = TcpState::NotConnected;
+    }
+    if new_status == WifiStatus::Connected && state.wifi_state != WifiStatus::Connected {
+        save_creds(&state.ssid, &state.password.text);
+    }
+    state.wifi_state = new_status;
 }
 
 /// Save the given SSID and password in a data file.
@@ -324,13 +296,14 @@ fn draw_messages(state: &mut State) {
     let color = theme.primary;
 
     let wifi_msg = match state.wifi_state {
-        WifiState::NotConnected | WifiState::Connecting => "1. Connecting to internet...",
-        WifiState::ObtainingIP => "1. Obtaining IP address...",
-        WifiState::Connected => "1. Connected to internet.",
-        WifiState::Failed => "1. Failed to connect to internet.",
+        WifiStatus::Started => "1. Connecting to internet...",
+        WifiStatus::Stopped => "1. Not connected to internet.",
+        WifiStatus::Disconnected(r) => &alloc::format!("1. Disconnected: {}.", r.as_str()),
+        WifiStatus::Initializing => "1. Obtaining IP address...",
+        WifiStatus::Connected => "1. Connected to internet.",
     };
     draw_text_line(1, wifi_msg, font, color);
-    if state.wifi_state != WifiState::Connected {
+    if state.wifi_state != WifiStatus::Connected {
         return;
     }
 

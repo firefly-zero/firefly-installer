@@ -4,19 +4,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::net::SocketAddrV4;
 
-/// Wi-Fi connection status.
-#[derive(Clone, Copy, PartialEq)]
-pub enum Status {
-    Error,
-    /// Unknown status.
-    Other,
-    /// Not connected (or failed to connect) to an Access Point.
-    Disconnected,
-    /// Connected to the Access Point, obtaining IP address.
-    Initializing,
-    /// IP address is obtained, ready to go.
-    Connected,
-}
+pub type WifiStatus = firefly_types::wifi::Status;
 
 /// TCP connection status.
 ///
@@ -104,15 +92,9 @@ pub fn connect(ssid: &str, pass: &str) {
     };
 }
 
-pub fn status() -> Status {
+pub fn status() -> WifiStatus {
     let status = unsafe { bindings::status() };
-    match status {
-        1 => Status::Error,
-        2 => Status::Disconnected,
-        3 => Status::Initializing,
-        4 => Status::Connected,
-        _ => Status::Other,
-    }
+    WifiStatus::from(status as u8)
 }
 
 /// Close Wi-Fi connection.
