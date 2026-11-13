@@ -301,11 +301,6 @@ impl Installer {
             }
         }
 
-        // Unlike in firefly-cli, here we don't need
-        // to write `/sys/new-app` or `sys/launcher`.
-        // If the user launches "sys.installer",
-        // we assume that they already have a working launcher installed.
-
         Ok(())
     }
 
